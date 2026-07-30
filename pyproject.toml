@@ -16,7 +16,6 @@ keywords = ["a-stock", "china-stock", "terminal", "tui", "boss-key", "摸鱼"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
