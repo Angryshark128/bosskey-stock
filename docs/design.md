@@ -1,0 +1,210 @@
+# BossKey-Stock — 终端摸鱼盯盘工具
+
+终端摸鱼盯盘工具。Sina Finance API 获取盘中数据，Rich Live 渲染，按 `b` 键一键切换 Docker 编译日志伪装界面。
+
+---
+
+## 技术栈
+
+| 层级 | 选型 | 说明 |
+|------|------|------|
+| 语言 | Python 3.10+ | 标准库 + 三个第三方包 |
+| 数据源 | [Sina Finance 实时行情 API](https://hq.sinajs.cn/) | 免费，无需 API Key |
+| 终端 UI | Rich Live + HORIZONTALS box | 保留终端默认背景色，无纵向边框 |
+| 配置 | TOML (tomlkit) | 用户配置文件 `~/.bosskey.toml` |
+
+## 架构
+
+```
+bosskey-stock/
+├── pyproject.toml            # 打包配置，CLI entry point
+├── docs/design.md            # 本文档
+└── bosskey_stock/
+    ├── __init__.py            # 包标记
+    ├── __main__.py            # CLI 入口，子命令路由（49 行）
+    ├── app.py                 # 主循环：Rich Live + 非阻塞键盘输入（211 行）
+    ├── data.py                # Sina 数据层，解析 GBK 编码响应（103 行）
+    ├── boss.py                # 老板模式伪装内容（72 行）
+    └── config.py              # 配置读写（56 行）
+```
+
+## CLI 命令
+
+| 命令 | 功能 |
+|------|------|
+| `bosskey run` | 启动监控界面（默认子命令） |
+| `bosskey add 000001 600519` | 添加股票到监控列表 |
+| `bosskey rm 000001` | 从监控列表移除股票 |
+| `bosskey list` | 查看当前监控列表 |
+
+底层数据存 `~/.bosskey.toml`。
+
+## 配置文件
+
+```toml
+[display]
+refresh_interval = 3
+
+[watchlist]
+codes = ["000001", "600519", "300750"]
+```
+
+无需 API Key，首次运行无配置时自动创建默认配置。
+
+## 核心功能
+
+### 行情展示
+
+- 表格列：Code \| Name \| Price \| Chg% \| Chg \| Vol \| Open \| High \| Low
+- 红涨绿跌（A 股惯例），**整行 9 列全部**应用红绿色（`red3` / `green3`）
+- 仅横向分割线（`box=HORIZONTALS`），无纵向边框，无 `│` 竖线
+- 表头不加粗（`header_style=""`），所有数据不加粗
+- 成交量显示格式：`N`（<1 万手）→ `N.XX万`（≥1 万手）→ `N.XX亿`（≥1 亿手）
+
+### 自动刷新
+
+- 默认 3 秒刷新，可配置
+- **交易时段**（9:30-11:30、13:00-15:00，仅工作日）内自动刷新，表格下方显示 `Last update: HH:MM:SS`（本地刷新时间）
+- **非交易时段**不自动刷新，表格下方显示 `Last trade: 日期 时间`（数据源最后成交时间），前缀 `[After Hours]`
+- 按 `r` 可手动刷新（非交易时段也可用）
+
+### 老板模式
+
+按 `b` 键切换：
+
+| 模式 | 显示内容 |
+|------|---------|
+| 正常模式 | 红绿配色的行情表格 |
+| 老板模式 | 模拟 Docker build 日志，随机生成步骤，底部显示运行时间 |
+
+再按 `b` 切回行情。状态仅在内存中，不持久化。
+
+### TUI 内操作
+
+| 按键 | 功能 |
+|------|------|
+| `b` | 老板模式切换 |
+| `q` / `Ctrl+C` | 退出（终端完全恢复，无 traceback） |
+| `r` | 手动刷新 |
+
+## 键盘输入实现
+
+无需后台线程。一次 `tcsetattr` 完成终端配置：
+
+- 仅修改 **输入侧** 参数：关掉 `ICANON`（逐键输入）、`ECHO`（不回显）、`ISIG`（不发信号）
+- **保留输出侧** `OPOST`，确保 `\n` → `\r\n` 转换正常，Rich 输出不受影响
+- 主循环调用 `select.select([fd], [], [], 0.5)` 等待按键或超时
+- 按键用 `os.read(fd, 1).decode()` 读取（绕过 Python stdio 缓冲）
+
+## 数据层
+
+### Sina Finance API
+
+- 接口：`https://hq.sinajs.cn/list=sh600519,sz000001,...`
+- 需要 `Referer: https://finance.sina.com.cn` 请求头
+- 响应编码：GBK
+- 返回值包含：名称、开、昨收、现价、高、低、成交量（股）、成交额
+- 本地计算涨跌额和涨跌幅
+
+### 代码前缀转换
+
+| 代码开头 | Sina 前缀 |
+|----------|-----------|
+| 6 / 9 | `sh`（上海） |
+| 其他（0 / 3 等） | `sz`（深圳） |
+
+### 字段映射
+
+从 Sina 32+ 个字段中提取：
+
+| 索引 | 字段 |
+|------|------|
+| 0 | name |
+| 1 | open |
+| 2 | pre_close |
+| 3 | price |
+| 4 | high |
+| 5 | low |
+| 8 | vol（股） |
+| 9 | amount |
+| 30 | date |
+| 31 | time |
+
+### 股票代码解析
+
+正则 `hq_str_[a-z]+(\d+)="` 从 JS 变量名提取，**保留前导零**（如 `000001`）。
+
+### 错误处理
+
+| 场景 | 表现 |
+|------|------|
+| 网络异常 / 超时 | 所有行维持上次数据，状态栏显示 `[Offline]`（黄色加粗） |
+| 无效股票代码 | 静默跳过，不加入结果列表 |
+
+## 老板模式细节
+
+伪装内容为 Docker build 日志，特征：
+
+- `Step N/M : FROM python:3.12-slim` / `RUN pip install pkg==x.y.z` / `COPY . /app` / `WORKDIR /app` / `apt-get install ...`
+- 偶尔穿插 `WARNING: package X has requirement Y, but you'll have incompatible version Z`
+- 底部显示 `Running time: MM:SS`
+- 日志预生成后 5 倍重复，每秒滚动 2 行，首行固定为 `$ docker build -t app:latest .`
+
+## 状态栏
+
+位于表格正下方，状态优先级：
+
+| 条件 | 显示 |
+|------|------|
+| 网络断开 | `[Offline]`（黄色加粗） |
+| 非交易时段 | `[After Hours] Last trade: 2026-07-30 16:30:00` |
+| 交易时段 | `Last update: 14:30:00` |
+
+颜色：`[After Hours]` 用 `bright_black`（灰色），深色和浅色终端均可见。
+
+## 安装与运行
+
+### pip 安装
+
+```bash
+pip install bosskey-stock
+```
+
+### 开发模式（可编辑，改代码立即生效）
+
+```bash
+git clone https://github.com/shark/bosskey-stock.git
+cd bosskey-stock
+pip install -e .
+```
+
+安装后直接使用 `bosskey` 命令：
+
+```bash
+bosskey run
+bosskey add 600519
+bosskey rm 000001
+bosskey list
+```
+
+### 打包为独立二进制
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile -n bosskey bosskey_stock/__main__.py
+# 产物在 dist/bosskey
+```
+
+## 依赖
+
+```
+rich>=13.0
+tomlkit>=0.12
+requests>=2.28
+```
+
+无 textual、无 tushare、无 curses。
+
+---
+
+> 最后更新：2026-07-30
