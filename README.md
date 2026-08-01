@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/pypi-v0.1.0-orange" alt="PyPI">
+  <img src="https://img.shields.io/badge/pypi-v0.2.0-orange" alt="PyPI">
 </p>
 
 <h1 align="center">BossKey-Stock — 终端摸鱼盯盘工具</h1>
@@ -26,18 +26,20 @@
 ## 截图
 
 <p align="center">
-  <img src="docs/screenshot-demo.gif" alt="BossKey-Stock demo" width="720">
+  <img src="docs/screenshot-demo.gif" alt="BossKey-Stock demo" width="800">
 </p>
 
-*行情刷新时的实时变化，按 `b` 键一键切换老板模式*
+*按 `t` 逐级展开持仓/成本、持仓收益、今日收益列与底部汇总；按 `b` 一键切换老板模式*
 
 ![Normal mode](docs/screenshot-normal.svg)
 
-*正常模式 — 红涨绿跌的行情看板*
+*正常模式 — 行情 + 持仓/成本 + 持仓收益（率）+ 今日收益（率），底部汇总总市值 / 总成本 / 总收益 / 今日收益*
 
 ![Boss mode](docs/screenshot-boss.svg)
 
 *老板模式 — 按 `b` 后秒变 Docker build 日志*
+
+> 截图可用 `python scripts/make_screenshots.py` 重新生成（macOS，需 qlmanage）。
 
 ## 功能
 
@@ -47,8 +49,10 @@
 | ⏱ **智能刷新** | 交易时段（工作日 9:30-11:30 / 13:00-15:00）自动刷新，非交易时段停刷 |
 | 🕶 **老板模式** | 按 `b` 一键切换 Docker build 伪日志，再按 `b` 切回 |
 | ⌨️ **零依赖终端控制** | 单线程，一次 `tcsetattr`，无后台线程 |
-| ⚡ **键盘操作** | `r` 手动刷新，`q` / `Ctrl+C` 退出 |
+| ⚡ **键盘操作** | `r` 手动刷新，`t` 切换持仓/收益列，`q` / `Ctrl+C` 退出 |
 | 📝 **监控列表管理** | CLI 子命令 `add` / `rm` / `list` |
+| 💼 **持仓与收益** | `pos add` 交互式多选录入持仓，TUI 切换显示持仓、成本、持仓收益（率）、今日收益（率），底部同步汇总总市值/总收益 |
+| 🕶️ **英文伪装** | 界面与 CLI 交互全英文，英文非母语一眼难读，继续强化「在工作」的伪装 |
 | 🌐 **离线检测** | 网络断开时黄色 `[Offline]` 提示，续网自动恢复 |
 
 ## 安装
@@ -83,6 +87,15 @@ bosskey rm 000001
 
 # 查看当前监控列表
 bosskey list
+
+# 交互式记录持仓：列出监控列表多选，逐个录入股数与成本价
+bosskey pos add
+
+# 移除持仓
+bosskey pos rm 000001
+
+# 查看全部持仓
+bosskey pos list
 ```
 
 ### 终端内操作
@@ -91,6 +104,7 @@ bosskey list
 |------|------|
 | `b` | 老板模式切换（行情 ↔ Docker 日志） |
 | `r` | 手动刷新行情 |
+| `t` | 循环切换显示模式：行情 → +持仓/成本 → +持仓收益（率） → +今日收益（率）；底部同步切换总市值/总成本、总收益（率）、今日收益（率）汇总 |
 | `q` / `Ctrl+C` | 退出（终端完全恢复，无 traceback） |
 
 ## 配置
@@ -103,7 +117,13 @@ refresh_interval = 3
 
 [watchlist]
 codes = ["000001", "600519", "300750"]
+
+[holdings]
+# code = { shares = 持仓股数, cost = 成本价 }
+600519 = { shares = 100, cost = 1500.50 }
 ```
+
+> 持仓可用 `bosskey pos add/rm/list` 管理；`pos add` 交互式多选监控列表中的股票并逐个录入股数与成本价。
 
 ## 数据来源
 

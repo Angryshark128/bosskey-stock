@@ -3,8 +3,6 @@
 import os
 import tempfile
 
-from bosskey_stock import config
-
 _PREFIX = "bosskey_test_config"
 
 
@@ -70,5 +68,60 @@ def test_remove_nonexistent():
         cfg, orig = _monkey_patch_cfg(tmp)
         try:
             cfg.remove_codes("non_existent")
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_position_add_and_list():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.add_position("600519", 100, 1500.0)
+            cfg.add_position("000001", 300, 12.5)
+            pos = cfg.list_positions()
+            assert pos["600519"] == {"shares": 100, "cost": 1500.0}
+            assert pos["000001"] == {"shares": 300, "cost": 12.5}
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_position_add_joins_watchlist():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.add_position("888888", 100, 10.0)
+            assert "888888" in cfg.list_codes()
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_position_update():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.add_position("600519", 100, 1500.0)
+            cfg.add_position("600519", 200, 1600.0)
+            pos = cfg.list_positions()
+            assert pos["600519"] == {"shares": 200, "cost": 1600.0}
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_position_remove():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.add_position("600519", 100, 1500.0)
+            cfg.remove_position("600519")
+            assert cfg.list_positions() == {}
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_position_remove_nonexistent():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.remove_position("non_existent")
         finally:
             cfg.CONFIG_PATH = orig

@@ -36,8 +36,19 @@ bosskey-stock/
 | `bosskey add 000001 600519` | 添加股票到监控列表 |
 | `bosskey rm 000001` | 从监控列表移除股票 |
 | `bosskey list` | 查看当前监控列表 |
+| `bosskey pos add` | 交互式添加/更新持仓 |
+| `bosskey pos rm CODE` | 移除持仓 |
+| `bosskey pos list` | 查看全部持仓 |
 
 底层数据存 `~/.bosskey.toml`。
+
+### 持仓录入（交互式）
+
+`bosskey pos add` 无参数，纯交互（提示全英文）：
+
+1. 列出 watchlist 全部代码（已有持仓标 `*`），按编号逗号多选（如 `1,3`，回车取消）。
+2. 对每个选中代码逐个提示 `Shares:`（正整数）与 `Cost:`（正数），带校验，无效输入重试。
+3. 全部录入后写入 `[holdings]` 并输出 `Saved:` 确认。
 
 ## 配置文件
 
@@ -47,6 +58,10 @@ refresh_interval = 3
 
 [watchlist]
 codes = ["000001", "600519", "300750"]
+
+[holdings]
+# code = { shares = 持仓股数, cost = 成本价 }
+600519 = { shares = 100, cost = 1500.50 }
 ```
 
 无需 API Key，首次运行无配置时自动创建默认配置。
@@ -68,6 +83,42 @@ codes = ["000001", "600519", "300750"]
 - **非交易时段**不自动刷新，表格下方显示 `Last trade: 日期 时间`（数据源最后成交时间），前缀 `[After Hours]`
 - 按 `r` 可手动刷新（非交易时段也可用）
 
+### 持仓与收益显示
+
+按 `t` 键在 4 种显示模式间循环（仅内存态，不持久化）：
+
+| 模式 | 追加列 | 说明 |
+|------|--------|------|
+| 0 | 无 | 基础行情（默认） |
+| 1 | `Pos` `Cost` | 持仓股数、成本价（中性色） |
+| 2 | `HoldP/L` `HoldP/L%` | 持仓收益额、持仓收益率 |
+| 3 | `TodayP/L` `TodayP/L%` | 今日收益额、今日收益率 |
+
+计算公式（`shares` 持仓股数、`cost` 成本价、`price` 现价、`change` 今日涨跌额）：
+
+- 持仓收益 = `(price - cost) × shares`；持仓收益率 = `(price - cost) / cost × 100`
+- 今日收益 = `change × shares`；今日收益率 = `change_pct`
+
+收益列按自身符号着色（正红 `red3` 负绿 `green3`，零/空无色），不再跟随整行行情色；无持仓或数据缺失显示 `--`。状态栏右侧显示当前启用的列组（英文 `Cols:`）。
+
+**底部汇总**：`t` 切换时底部同步追加持仓汇总行（仅 mode>0 显示），全部英文：
+
+| 模式 | 汇总内容 |
+|------|----------|
+| ≥1 | `Value <总市值> · Cost <总成本>` |
+| ≥2 | 追加 `HoldP/L <总收益额> (<总收益率>%)` |
+| ≥3 | 追加 `TodayP/L <今日收益额> (<今日收益率>%)` |
+
+- 总市值 = Σ 现价×股数；总成本 = Σ 成本×股数；总收益 = 总市值 − 总成本；总收益率 = 总收益 / 总成本。
+- 今日收益率 = 今日收益 / 昨日市值（Σ 昨收×股数），昨收缺失时退回按总成本。
+- 收益金额与收益率按符号红绿着色。
+
+> 15 列全开时建议较宽终端。
+
+### 英文 UI（伪装设计）
+
+界面与 CLI 交互刻意全英文：表头、状态栏、`pos add` 交互提示、`add/rm/list` 输出均无中文。理由：英文非母语，不会被一眼读懂，与老板模式一起构成「在工作」的伪装（决策见 `.claude/DECISIONS.md`）。
+
 ### 老板模式
 
 按 `b` 键切换：
@@ -86,6 +137,7 @@ codes = ["000001", "600519", "300750"]
 | `b` | 老板模式切换 |
 | `q` / `Ctrl+C` | 退出（终端完全恢复，无 traceback） |
 | `r` | 手动刷新 |
+| `t` | 循环切换持仓/收益显示模式 |
 
 ## 键盘输入实现
 
@@ -204,6 +256,20 @@ requests>=2.28
 ```
 
 无 textual、无 tushare、无 curses。
+
+## 截图生成
+
+`README.md` 的截图由 `scripts/make_screenshots.py` 生成，可复现：
+
+- 静态 SVG（`screenshot-normal.svg` / `screenshot-boss.svg`）：直接用 Rich `Console.export_svg` 渲染 TUI 视图（含 mode 3 持仓列与底部汇总）。
+- 演示 GIF（`screenshot-demo.gif`）：逐帧渲染 4 种显示模式 + 老板模式为 SVG → macOS `qlmanage` 栅格化为 PNG → PIL 合成为循环动画。
+
+```bash
+python scripts/make_screenshots.py          # 全部重新生成
+python scripts/make_screenshots.py --gif-only   # 只更新 demo GIF
+```
+
+仅开发时使用，非运行时依赖。
 
 ---
 

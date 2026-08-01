@@ -63,9 +63,9 @@ class BossGenerator:
         if len(window) < 15:
             window += self._lines[: 15 - len(window)]
 
-        lines = [f"$ docker build -t app:latest ."]
-        for l in window:
-            lines.append(l)
+        lines = ["$ docker build -t app:latest ."]
+        for line in window:
+            lines.append(line)
         lines.append("")
         lines.append(f"Running time: {elapsed_str}")
         return "\n".join(lines)
