@@ -87,16 +87,30 @@ def _boss_view():
 def _render_gif_frames():
     """返回 (views, durations_ms, titles) 列表。"""
     stocks = _stocks()
+    en = app.lang("en")["t"]
+    zh = app.lang("zh")["t"]
     frames = [
-        (app._build_view(stocks, HOLDINGS, 0, False, False, "14:32:05"), 900, "bosskey: basic"),
-        (app._build_view(stocks, HOLDINGS, 1, False, False, "14:32:05"), 900, "press t: +Pos/Cost"),
-        (app._build_view(stocks, HOLDINGS, 2, False, False, "14:32:05"), 900, "press t: +HoldP/L"),
+        (app._build_view(stocks, HOLDINGS, 0, False, False, "14:32:05", en), 900, "bosskey: basic"),
         (
-            app._build_view(stocks, HOLDINGS, 3, False, False, "14:32:05"),
+            app._build_view(stocks, HOLDINGS, 1, False, False, "14:32:05", en),
+            900,
+            "press t: +Pos/Cost",
+        ),
+        (
+            app._build_view(stocks, HOLDINGS, 2, False, False, "14:32:05", en),
+            900,
+            "press t: +HoldP/L",
+        ),
+        (
+            app._build_view(stocks, HOLDINGS, 3, False, False, "14:32:05", en),
             1000,
             "press t: +TodayP/L",
         ),
-        (app._build_view(stocks, HOLDINGS, 3, False, False, "14:32:05"), 1500, "hold"),
+        (
+            app._build_view(stocks, HOLDINGS, 3, False, False, "14:32:05", zh, show_help=True),
+            1200,
+            "press l: 中文界面 + h 快捷键提示",
+        ),
         (_boss_view(), 2000, "press b: boss mode"),
         (_boss_view(), 700, "boss mode"),
     ]
@@ -182,10 +196,11 @@ def main():
     width = args.width
 
     stocks = _stocks()
+    en = app.lang("en")["t"]
     if not args.gif_only:
         print("normal mode SVG (mode 3) ...")
         _export_svg(
-            app._build_view(stocks, HOLDINGS, 3, False, False, "14:32:05"),
+            app._build_view(stocks, HOLDINGS, 3, False, False, "14:32:05", en),
             DOCS / "screenshot-normal.svg",
             "bosskey: 行情 + 持仓收益",
             width,

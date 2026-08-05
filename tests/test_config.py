@@ -125,3 +125,34 @@ def test_position_remove_nonexistent():
             cfg.remove_position("non_existent")
         finally:
             cfg.CONFIG_PATH = orig
+
+
+def test_default_lang_en():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            assert cfg.load()["display"]["lang"] == "en"
+            assert cfg.get_lang() == "en"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_set_lang_zh():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.set_lang("zh")
+            assert cfg.get_lang() == "zh"
+            assert cfg.load()["display"]["lang"] == "zh"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_get_lang_unknown_falls_back_en():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.set_lang("fr")
+            assert cfg.get_lang() == "en"
+        finally:
+            cfg.CONFIG_PATH = orig

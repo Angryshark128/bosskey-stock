@@ -13,8 +13,11 @@ def _make_sina_line(code, *fields):
 
 def test_parse_normal():
     # 32 fields: name, open, pre_close, price, high, low, 24 empty, date, time
-    fields = ["贵州茅台", "1680.00", "1675.00", "1690.00", "1700.00",
-              "1670.00"] + [""] * 24 + ["2026-07-30", "16:30:00"]
+    fields = (
+        ["贵州茅台", "1680.00", "1675.00", "1690.00", "1700.00", "1670.00"]
+        + [""] * 24
+        + ["2026-07-30", "16:30:00"]
+    )
     line = _make_sina_line("600519", *fields)
 
     s = data._parse(line)
@@ -36,8 +39,11 @@ def test_parse_normal():
 
 def test_parse_shenzhen():
     """深市 000001 平安银行"""
-    fields = (["平安银行", "12.50", "12.40", "12.60", "12.70", "12.30", "0", "0",
-               "1000000", "12600000"] + [""] * 21 + ["2026-07-30", "16:30:00", ""])
+    fields = (
+        ["平安银行", "12.50", "12.40", "12.60", "12.70", "12.30", "0", "0", "1000000", "12600000"]
+        + [""] * 21
+        + ["2026-07-30", "16:30:00", ""]
+    )
     line = _make_sina_line("000001", *fields)
     s = data._parse(line)
     assert s is not None
@@ -59,7 +65,8 @@ def test_parse_no_match():
 
 def test_parse_zero_pre_close():
     """昨收为 0 时涨跌幅为 None（除零保护）"""
-    fields = ["贵州茅台", "0.00", "0.00", "10.00", "0.00", "0.00"] + [""] * 24 + ["2026-07-30", "16:30:00"]
+    fields = ["贵州茅台", "0.00", "0.00", "10.00", "0.00", "0.00"]
+    fields += [""] * 24 + ["2026-07-30", "16:30:00"]
     line = _make_sina_line("600519", *fields)
     s = data._parse(line)
     assert s is not None

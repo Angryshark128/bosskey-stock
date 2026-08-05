@@ -1,6 +1,7 @@
 """Tests for boss mode — fake Docker log generator."""
 
 from bosskey_stock.boss import BossGenerator
+from bosskey_stock.i18n import lang
 
 
 def test_boss_init():
@@ -19,7 +20,14 @@ def test_boss_render_contains_docker():
 
 def test_boss_reset():
     bg = BossGenerator()
-    old_lines = bg._lines
     bg.reset()
     # Lines should be regenerated
     assert bg._lines is not None
+
+
+def test_boss_render_zh():
+    bg = BossGenerator()
+    out = bg.render(lang("zh")["t"])
+    assert "docker build" in out
+    assert "运行时间" in out
+    assert "Running time:" not in out

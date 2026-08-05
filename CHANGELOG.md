@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.1] - 2026-08-06
+
+### Added
+
+- 中英界面切换：默认英文（维持伪装），TUI 内按 `l` 会话内切换，CLI 全局参数 `--lang {en,zh}` 单次覆盖，配置文件 `~/.bosskey.toml` `[display] lang` 设初始语言，`--list-langs` 列出支持语言。
+- 快捷键提示：TUI 内按 `h` 开关底部快捷键提示行（默认隐藏，维持极简）。
+- 文案集中到 `bosskey_stock/i18n.py`（key → (en, zh) 对照表），TUI（表头/状态栏/底部汇总/快捷键提示）与 CLI（add/rm/list/pos 输出、`pos add` 交互提示、`--help`）全部中英化。
+- 老板模式日志主体保持英文 Docker 命令，仅底部 `Running time:` 本地化为 `运行时间:`。
+
+### Changed
+
+- 移除 mode 3 的 `TodayP/L%` 列（今日收益率与基础列 `Chg%` 数值相同，属冗余），模式 3 共 14 列，只保留 `TodayP/L` 今日收益额。
+
 ## [0.2.0] - 2026-08-01
 
 ### Added

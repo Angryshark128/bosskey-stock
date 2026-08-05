@@ -4,9 +4,21 @@ import random
 from datetime import datetime
 
 _PACKAGES = [
-    "requests", "click", "pyyaml", "jinja2", "numpy",
-    "pandas", "scipy", "flask", "fastapi", "psutil",
-    "httpx", "orjson", "pydantic", "uvicorn", "celery",
+    "requests",
+    "click",
+    "pyyaml",
+    "jinja2",
+    "numpy",
+    "pandas",
+    "scipy",
+    "flask",
+    "fastapi",
+    "psutil",
+    "httpx",
+    "orjson",
+    "pydantic",
+    "uvicorn",
+    "celery",
 ]
 
 
@@ -30,10 +42,8 @@ class BossGenerator:
                 )
             elif r < 0.25:
                 pkg = random.choice(_PACKAGES)
-                ver = f"{random.randint(1,5)}.{random.randint(0,9)}.{random.randint(0,9)}"
-                lines.append(
-                    f"Step {step}/{total} : RUN pip install --no-cache-dir {pkg}=={ver}"
-                )
+                ver = f"{random.randint(1, 5)}.{random.randint(0, 9)}.{random.randint(0, 9)}"
+                lines.append(f"Step {step}/{total} : RUN pip install --no-cache-dir {pkg}=={ver}")
             elif r < 0.4:
                 lines.append(
                     f"Step {step}/{total} : RUN apt-get update && apt-get install -y "
@@ -54,7 +64,7 @@ class BossGenerator:
         self._start = datetime.now()
         self._lines = self._build_log()
 
-    def render(self):
+    def render(self, tr=None):
         elapsed = datetime.now() - self._start
         elapsed_str = f"{elapsed.seconds // 60:02d}:{elapsed.seconds % 60:02d}"
         # 每秒滚 2 行
@@ -67,5 +77,9 @@ class BossGenerator:
         for line in window:
             lines.append(line)
         lines.append("")
-        lines.append(f"Running time: {elapsed_str}")
+        # 日志主体是英文 Docker 命令（翻译反而穿帮），仅底部状态行本地化
+        if tr is not None:
+            lines.append(tr("boss_running", elapsed=elapsed_str))
+        else:
+            lines.append(f"Running time: {elapsed_str}")
         return "\n".join(lines)
