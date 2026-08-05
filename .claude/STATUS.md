@@ -1,5 +1,18 @@
 # STATUS
 
+## [2026-08-06] v0.2.1 待发布 — TodayP/L% 去重 + 中英界面切换
+
+### 现状
+- 功能完成：删除 mode 3 的 `TodayP/L%` 列（与 `Chg%` 重复，模式 3 共 14 列）；新增 `bosskey_stock/i18n.py` 中英文案表；`[display] lang` 设初始语言（默认 `en`）；TUI 按 `l` 会话内切换、按 `h` 开关底部快捷键提示；CLI `--lang {en,zh}` / `--list-langs`；TUI 与 CLI 全部文案中英化（老板模式仅底部状态行本地化）。
+- 42 个测试全绿；ruff check / format 通过；CLI 双语手工冒烟通过。
+- 顺手修复历史遗留：test_data.py 两处 ruff 格式、test_boss.py 未用变量。
+
+### 待办
+- [ ] 版本号 0.2.0 → 0.2.1（pyproject / README badge / CHANGELOG）— P0
+- [ ] 截图重新生成（normal / boss / demo GIF 含中文帧与快捷键提示帧）+ 生成脚本 — P1
+- [ ] 推送分支 → 合并 main → tag → Release 发布 PyPI — P0
+- [ ] 回归：TUI 内 `l`/`h` 键切换、`t` 循环后语言与帮助状态保持 — P1
+
 ## [2026-08-01] v0.2.0 发布 — 持仓与收益显示
 
 ### 现状

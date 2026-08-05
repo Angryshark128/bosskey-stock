@@ -5,10 +5,12 @@ from pathlib import Path
 
 import tomlkit
 
+from . import i18n
+
 CONFIG_PATH = os.path.expanduser("~/.bosskey.toml")
 
 DEFAULT = {
-    "display": {"refresh_interval": 3},
+    "display": {"refresh_interval": 3, "lang": "en"},
     "watchlist": {"codes": ["000001", "600519", "300750"]},
     "holdings": {},
 }
@@ -21,6 +23,19 @@ def _ensure():
         save(DEFAULT)
         return DEFAULT
     return None
+
+
+def get_lang():
+    """返回规范化的语言代码（未知值回落 en）。"""
+    cfg = load()
+    return i18n.resolve(cfg.get("display", {}).get("lang", "en"))
+
+
+def set_lang(code):
+    """写入语言设置并持久化。"""
+    cfg = load()
+    cfg.setdefault("display", {})["lang"] = code
+    save(cfg)
 
 
 def load():

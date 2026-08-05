@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/pypi-v0.2.0-orange" alt="PyPI">
+  <img src="https://img.shields.io/badge/pypi-v0.2.1-orange" alt="PyPI">
 </p>
 
 <h1 align="center">BossKey-Stock — 终端摸鱼盯盘工具</h1>
@@ -29,11 +29,11 @@
   <img src="docs/screenshot-demo.gif" alt="BossKey-Stock demo" width="800">
 </p>
 
-*按 `t` 逐级展开持仓/成本、持仓收益、今日收益列与底部汇总；按 `b` 一键切换老板模式*
+*按 `t` 逐级展开持仓/成本、持仓收益、今日收益列与底部汇总；按 `l` 切换中文界面；按 `b` 一键切换老板模式*
 
 ![Normal mode](docs/screenshot-normal.svg)
 
-*正常模式 — 行情 + 持仓/成本 + 持仓收益（率）+ 今日收益（率），底部汇总总市值 / 总成本 / 总收益 / 今日收益*
+*正常模式 — 行情 + 持仓/成本 + 持仓收益（率）+ 今日收益，底部汇总总市值 / 总成本 / 总收益 / 今日收益*
 
 ![Boss mode](docs/screenshot-boss.svg)
 
@@ -51,8 +51,9 @@
 | ⌨️ **零依赖终端控制** | 单线程，一次 `tcsetattr`，无后台线程 |
 | ⚡ **键盘操作** | `r` 手动刷新，`t` 切换持仓/收益列，`q` / `Ctrl+C` 退出 |
 | 📝 **监控列表管理** | CLI 子命令 `add` / `rm` / `list` |
-| 💼 **持仓与收益** | `pos add` 交互式多选录入持仓，TUI 切换显示持仓、成本、持仓收益（率）、今日收益（率），底部同步汇总总市值/总收益 |
-| 🕶️ **英文伪装** | 界面与 CLI 交互全英文，英文非母语一眼难读，继续强化「在工作」的伪装 |
+| 💼 **持仓与收益** | `pos add` 交互式多选录入持仓，TUI 切换显示持仓、成本、持仓收益（率）、今日收益，底部同步汇总总市值/总收益 |
+| 🌐 **中英界面** | 默认英文伪装，`l` 键 / `--lang {en,zh}` / 配置 `display.lang` 随时切中文 |
+| 🕶️ **英文伪装** | 界面与 CLI 交互默认全英文，英文非母语一眼难读，继续强化「在工作」的伪装 |
 | 🌐 **离线检测** | 网络断开时黄色 `[Offline]` 提示，续网自动恢复 |
 
 ## 安装
@@ -96,6 +97,10 @@ bosskey pos rm 000001
 
 # 查看全部持仓
 bosskey pos list
+
+# 指定语言运行（可选：默认取配置 display.lang，未设置时英文）
+bosskey --lang zh run
+bosskey --lang zh list
 ```
 
 ### 终端内操作
@@ -104,7 +109,9 @@ bosskey pos list
 |------|------|
 | `b` | 老板模式切换（行情 ↔ Docker 日志） |
 | `r` | 手动刷新行情 |
-| `t` | 循环切换显示模式：行情 → +持仓/成本 → +持仓收益（率） → +今日收益（率）；底部同步切换总市值/总成本、总收益（率）、今日收益（率）汇总 |
+| `t` | 循环切换显示模式：行情 → +持仓/成本 → +持仓收益（率） → +今日收益；底部同步切换总市值/总成本、总收益（率）、今日收益（率）汇总 |
+| `l` | 中英界面切换（会话内，默认英文） |
+| `h` | 底部快捷键提示开关 |
 | `q` / `Ctrl+C` | 退出（终端完全恢复，无 traceback） |
 
 ## 配置
@@ -114,6 +121,7 @@ bosskey pos list
 ```toml
 [display]
 refresh_interval = 3
+lang = "en"  # 界面语言：en / zh（TUI 内按 l 切换）
 
 [watchlist]
 codes = ["000001", "600519", "300750"]
@@ -153,7 +161,8 @@ bosskey-stock/
 │   ├── app.py             # 主循环：Rich Live + 非阻塞键盘输入
 │   ├── data.py            # Sina 数据层，GBK 编码解析
 │   ├── boss.py            # 老板模式（Docker build 伪日志）
-│   └── config.py          # 配置读写
+│   ├── config.py          # 配置读写
+│   └── i18n.py            # 中英文案表与语言解析
 ├── tests/
 │   ├── test_data.py       # 数据解析测试
 │   ├── test_config.py     # 配置管理测试

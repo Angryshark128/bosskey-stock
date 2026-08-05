@@ -18,6 +18,7 @@ from rich.text import Text
 
 from .boss import BossGenerator
 from .data import fetch
+from .i18n import lang
 
 # ── 交易时段 ────────────────────────────────────────────
 
@@ -49,6 +50,7 @@ def _fmt_vol(shares):
 
 # ── 持仓收益计算与列渲染 ──────────────────────────────
 
+# 模式 0 基础列；change_pct 列按语言取表头（Chg% / 涨跌幅）
 _BASE_COLS = ("Code", "Name", "Price", "Chg%", "Chg", "Vol", "Open", "High", "Low")
 _DISPLAY_MODES = 4  # 0=基础, 1=+持仓/成本, 2=+持仓收益, 3=+今日收益
 
@@ -120,7 +122,25 @@ def _read_key(fd):
 # ── UI 构建 ─────────────────────────────────────────────
 
 
-def _build_table(stocks, holdings, mode):
+_COL_KEYS = {
+    "Code": "col_code",
+    "Name": "col_name",
+    "Price": "col_price",
+    "Chg%": "col_chg_pct",
+    "Chg": "col_chg",
+    "Vol": "col_vol",
+    "Open": "col_open",
+    "High": "col_high",
+    "Low": "col_low",
+    "Pos": "col_pos",
+    "Cost": "col_cost",
+    "HoldP/L": "col_hold_pl",
+    "HoldP/L%": "col_hold_pct",
+    "TodayP/L": "col_today_pl",
+}
+
+
+def _build_table(stocks, holdings, mode, tr):
     table = Table(
         box=HORIZONTALS,
         show_header=True,
@@ -135,9 +155,9 @@ def _build_table(stocks, holdings, mode):
     if mode >= 2:
         cols += ["HoldP/L", "HoldP/L%"]
     if mode >= 3:
-        cols += ["TodayP/L", "TodayP/L%"]
+        cols += ["TodayP/L"]
     for col in cols:
-        table.add_column(col)
+        table.add_column(tr(_COL_KEYS[col]))
 
     for s in stocks:
         price = s["price"]
@@ -176,14 +196,7 @@ def _build_table(stocks, holdings, mode):
         if mode >= 3:
             if m:
                 row.append(Text(f"{m['today_pl']:+,.2f}", style=_pl_style(m["today_pl"])))
-                row.append(
-                    Text(
-                        f"{m['today_pct']:+.2f}%" if m["today_pct"] is not None else "--",
-                        style=_pl_style(m["today_pct"]),
-                    )
-                )
             else:
-                row.append(Text("--"))
                 row.append(Text("--"))
 
         table.add_row(*row)
@@ -191,32 +204,32 @@ def _build_table(stocks, holdings, mode):
     return table
 
 
-def _build_status(stocks, after_hours, offline, update_time, mode):
+def _build_status(stocks, after_hours, offline, update_time, mode, tr):
     text = Text()
     if offline:
-        text.append("[Offline]  ", style="yellow bold")
+        text.append(tr("offline"), style="yellow bold")
     if after_hours:
-        text.append("[After Hours]  ", style="bright_black")
+        text.append(tr("after_hours"), style="bright_black")
         if stocks and stocks[0].get("trade_time") and stocks[0].get("date"):
-            text.append(f"Last trade: {stocks[0]['date']} {stocks[0]['trade_time']}")
+            text.append(f" {tr('last_trade')} {stocks[0]['date']} {stocks[0]['trade_time']}")
         else:
-            text.append("Last trade: --")
+            text.append(f" {tr('last_trade')} --")
     else:
-        text.append(f"Last update: {update_time}")
+        text.append(f"{tr('last_update')} {update_time}")
 
     if mode:
         labels = []
         if mode >= 1:
-            labels.append("Pos/Cost")
+            labels.append(tr("col_group_pos_cost"))
         if mode >= 2:
-            labels.append("HoldP/L")
+            labels.append(tr("col_group_hold_pl"))
         if mode >= 3:
-            labels.append("TodayP/L")
-        text.append("  Cols: " + " · ".join(labels), style="bright_black")
+            labels.append(tr("col_group_today_pl"))
+        text.append("  " + tr("cols") + " " + " · ".join(labels), style="bright_black")
     return text
 
 
-def _build_summary(stocks, holdings, mode):
+def _build_summary(stocks, holdings, mode, tr):
     """底部汇总：总市值/总成本、总收益（率）、今日收益（率）。仅 mode>0 时调用。"""
     cost_val = 0.0
     pos_val = 0.0
@@ -238,16 +251,20 @@ def _build_summary(stocks, holdings, mode):
 
     text = Text()
     if mode >= 1:
-        text.append(f"Value {pos_val:,.2f}  ·  Cost {cost_val:,.2f}")
+        text.append(tr("summary_value_cost", v=f"{pos_val:,.2f}", c=f"{cost_val:,.2f}"))
     if mode >= 2:
         hold_pl = pos_val - cost_val
         hold_pct = hold_pl / cost_val * 100
-        text.append("  ·  HoldP/L ")
+        text.append("  ·  ")
+        text.append(tr("summary_hold_pl"))
+        text.append(" ")
         text.append(f"{hold_pl:+,.2f} ({hold_pct:+.2f}%)", style=_pl_style(hold_pl))
     if mode >= 3:
         denom = prev_val or cost_val
         today_pct = today_pl / denom * 100 if denom else None
-        text.append("  ·  TodayP/L ")
+        text.append("  ·  ")
+        text.append(tr("summary_today_pl"))
+        text.append(" ")
         text.append(
             f"{today_pl:+,.2f}" + (f" ({today_pct:+.2f}%)" if today_pct is not None else ""),
             style=_pl_style(today_pl),
@@ -255,17 +272,27 @@ def _build_summary(stocks, holdings, mode):
     return text
 
 
-def _build_view(stocks, holdings, mode, after, offline, ts):
-    parts = [_build_table(stocks, holdings, mode), _build_status(stocks, after, offline, ts, mode)]
+def _build_help(tr):
+    """快捷键提示行：q/r/t/l/b/h。灰色低调，不打断表格。"""
+    return Text(tr("help_hint"), style="bright_black")
+
+
+def _build_view(stocks, holdings, mode, after, offline, ts, tr, show_help=False):
+    parts = [
+        _build_table(stocks, holdings, mode, tr),
+        _build_status(stocks, after, offline, ts, mode, tr),
+    ]
     if mode:
-        parts.append(_build_summary(stocks, holdings, mode))
+        parts.append(_build_summary(stocks, holdings, mode, tr))
+    if show_help:
+        parts.append(_build_help(tr))
     return Group(*parts)
 
 
 # ── 主循环 ──────────────────────────────────────────────
 
 
-def main_loop(cfg):
+def main_loop(cfg, lang_code=None):
     codes = cfg["watchlist"]["codes"]
     holdings = dict(cfg.get("holdings") or {})
     interval = cfg["display"]["refresh_interval"]
@@ -273,6 +300,9 @@ def main_loop(cfg):
     boss = BossGenerator()
     boss_mode = False
     mode = 0  # 显示模式：0=基础，1..3 渐进展开持仓/收益列
+    show_help = False  # h 键：底部快捷键提示
+    lang_state = lang(lang_code if lang_code is not None else cfg["display"].get("lang", "en"))
+    tr = lang_state["t"]
 
     # 先拉数据，再进备屏（避免用户看到 Loading… 后卡住）
     stocks_cache = fetch(codes)
@@ -290,7 +320,9 @@ def main_loop(cfg):
             # 进入备屏后立即渲染已有数据
             ts = datetime.now().strftime("%H:%M:%S")
             live.update(
-                _build_view(stocks_cache, holdings, mode, not _in_session(), offline, ts),
+                _build_view(
+                    stocks_cache, holdings, mode, not _in_session(), offline, ts, tr, show_help
+                ),
                 refresh=True,
             )
 
@@ -305,11 +337,16 @@ def main_loop(cfg):
                         boss.reset()
                 if key == "t":
                     mode = (mode + 1) % _DISPLAY_MODES
+                if key == "l":  # 中英切换（会话内，不持久化）
+                    lang_state = lang("zh" if lang_state["code"] == "en" else "en")
+                    tr = lang_state["t"]
+                if key == "h":  # 快捷键提示开关
+                    show_help = not show_help
                 force = key == "r"
 
                 # ── boss 模式（跳过行情渲染） ──
                 if boss_mode:
-                    live.update(boss.render(), refresh=True)
+                    live.update(boss.render(tr), refresh=True)
                     continue
 
                 # ── 行情 ──
@@ -328,7 +365,7 @@ def main_loop(cfg):
                     last_refresh = now.timestamp()
 
                 live.update(
-                    _build_view(stocks_cache, holdings, mode, after, offline, ts),
+                    _build_view(stocks_cache, holdings, mode, after, offline, ts, tr, show_help),
                     refresh=True,
                 )
     except KeyboardInterrupt:

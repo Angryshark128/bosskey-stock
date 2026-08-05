@@ -2,7 +2,8 @@
 
 import pytest
 
-from bosskey_stock.app import _build_summary, _build_table, _pos_metrics
+from bosskey_stock.app import _build_summary, _build_table, _build_view, _pos_metrics
+from bosskey_stock.i18n import lang
 
 
 def _stock():
@@ -54,10 +55,19 @@ def test_pos_metrics_no_price():
 def test_build_table_columns_grow_with_mode():
     stocks = [_stock()]
     h = {"600519": {"shares": 100, "cost": 1600.0}}
-    assert len(_build_table(stocks, h, 0).columns) == 9
-    assert len(_build_table(stocks, h, 1).columns) == 11
-    assert len(_build_table(stocks, h, 2).columns) == 13
-    assert len(_build_table(stocks, h, 3).columns) == 15
+    en = lang("en")["t"]
+    zh = lang("zh")["t"]
+    assert len(_build_table(stocks, h, 0, en).columns) == 9
+    assert len(_build_table(stocks, h, 1, en).columns) == 11
+    assert len(_build_table(stocks, h, 2, en).columns) == 13
+    # mode 3 不追加 TodayP/L%（与 Chg% 重复），共 14 列
+    assert len(_build_table(stocks, h, 3, en).columns) == 14
+    # 中文表头
+    headers = [c.header for c in _build_table(stocks, h, 3, zh).columns]
+    assert "今日盈亏" in headers
+    assert "涨跌幅" in headers
+    assert "TodayP/L%" not in headers
+    assert "今日盈亏%" not in headers
 
 
 def test_build_summary_modes():
@@ -65,16 +75,36 @@ def test_build_summary_modes():
     # hold_pl +9000 (5.62%), today_pl +1500 (0.90% vs pre_close 1675*100)
     stocks = [_stock()]
     h = {"600519": {"shares": 100, "cost": 1600.0}}
-    s1 = _build_summary(stocks, h, 1).plain
+    en = lang("en")["t"]
+    zh = lang("zh")["t"]
+    s1 = _build_summary(stocks, h, 1, en).plain
     assert "Value 169,000.00" in s1
     assert "Cost 160,000.00" in s1
-    s2 = _build_summary(stocks, h, 2).plain
+    s2 = _build_summary(stocks, h, 2, en).plain
     assert "HoldP/L +9,000.00 (+5.62%)" in s2
-    s3 = _build_summary(stocks, h, 3).plain
+    s3 = _build_summary(stocks, h, 3, en).plain
     assert "TodayP/L +1,500.00 (+0.90%)" in s3
+    # 中文汇总
+    s1z = _build_summary(stocks, h, 1, zh).plain
+    assert "市值 169,000.00" in s1z
+    assert "成本 160,000.00" in s1z
+    s3z = _build_summary(stocks, h, 3, zh).plain
+    assert "今日盈亏 +1,500.00 (+0.90%)" in s3z
 
 
 def test_build_summary_empty():
     stocks = [_stock()]
-    assert _build_summary(stocks, {}, 3).plain == ""
-    assert _build_summary(stocks, {"600519": {"shares": 0, "cost": 0}}, 3).plain == ""
+    tr = lang("en")["t"]
+    assert _build_summary(stocks, {}, 3, tr).plain == ""
+    assert _build_summary(stocks, {"600519": {"shares": 0, "cost": 0}}, 3, tr).plain == ""
+
+
+def test_build_view_help_hidden_by_default():
+    stocks = [_stock()]
+    tr = lang("en")["t"]
+    v = _build_view(stocks, {}, 0, False, False, "14:32:05", tr)
+    assert v.renderables[0] is not None  # 表格
+    assert len(v.renderables) == 2  # 无帮助行
+    v2 = _build_view(stocks, {}, 0, False, False, "14:32:05", tr, show_help=True)
+    assert len(v2.renderables) == 3  # 追加帮助行
+    assert "q quit" in v2.renderables[2].plain
