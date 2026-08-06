@@ -2,7 +2,7 @@
 
 import pytest
 
-from bosskey_stock.app import _build_summary, _build_table, _build_view, _pos_metrics
+from bosskey_stock.app import _build_summary, _build_table, _build_view, _is_etf, _pos_metrics
 from bosskey_stock.i18n import lang
 
 
@@ -108,3 +108,33 @@ def test_build_view_help_hidden_by_default():
     v2 = _build_view(stocks, {}, 0, False, False, "14:32:05", tr, show_help=True)
     assert len(v2.renderables) == 3  # 追加帮助行
     assert "q quit" in v2.renderables[2].plain
+
+
+def _stock_with(code, price):
+    s = _stock()
+    s["code"] = code
+    s["price"] = price
+    s["open"] = price
+    s["high"] = price
+    s["low"] = price
+    return s
+
+
+def test_is_etf():
+    assert _is_etf("513050") is True
+    assert _is_etf("159801") is True
+    assert _is_etf("600519") is False
+    assert _is_etf("000001") is False
+
+
+def test_price_precision_etf_three_stock_two():
+    tr = lang("en")["t"]
+
+    etf = _build_table([_stock_with("513050", 1.2345)], {}, 0, tr)
+    # 现价/开高低/涨跌额均按 3 位展示
+    etf_plain = etf.columns[2]._cells[0].plain
+    assert etf_plain == "1.234" or etf_plain == "1.235"  # 保留3位
+
+    stock = _build_table([_stock_with("600519", 1690.0)], {}, 0, tr)
+    stock_plain = stock.columns[2]._cells[0].plain
+    assert stock_plain == "1690.00"  # 股票仍 2 位

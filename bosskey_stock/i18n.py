@@ -41,8 +41,8 @@ _T = {
     "boss_running": ("Running time: {elapsed}", "运行时间: {elapsed}"),
     # 快捷键提示
     "help_hint": (
-        "q quit · r refresh · t columns · b boss mode · l language · h help",
-        "q 退出 · r 刷新 · t 列模式 · b 老板模式 · l 中英 · h 隐藏提示",
+        "q quit · r refresh · t columns · c color · b boss mode · l language · h help",
+        "q 退出 · r 刷新 · t 列模式 · c 单色 · b 老板模式 · l 中英 · h 隐藏提示",
     ),
     # CLI
     "cli_added": ("Added: {codes}", "已添加: {codes}"),
@@ -81,12 +81,25 @@ _T = {
     "help_rm": ("Remove stocks from the watchlist", "从监控列表移除股票"),
     "help_rm_codes": ("stock codes", "股票代码"),
     "help_list": ("Show the current watchlist", "查看当前监控列表"),
+    "help_list_interactive": (
+        "interactively reorder/delete the watchlist",
+        "交互式调整监控列表顺序并删除",
+    ),
     "help_pos": ("Manage positions (shares + cost)", "管理持仓 (股数 + 成本价)"),
     "help_pos_add": ("Interactively add/update positions", "交互式添加/更新持仓"),
     "help_pos_rm": ("Remove a position", "移除持仓"),
     "help_pos_rm_code": ("stock code", "股票代码"),
     "help_pos_list": ("Show all positions", "查看全部持仓"),
     "help_run": ("Start the monitoring UI (default)", "启动盯盘界面 (默认)"),
+    # Reorder TUI
+    "reorder_loading": ("Fetching names...", "正在获取名称..."),
+    "reorder_title": ("Reorder/delete (↑/↓ or k/j move · Space pick/drop · d mark delete · s save · q cancel)", "调整顺序/删除 (↑/↓ 或 k/j 移动 · 空格 拿起/放下 · d 标记删除 · s 保存 · q 取消)"),
+    "reorder_empty": ("Watchlist is empty. Use `bosskey add CODE` first.", "监控列表为空, 请先 `bosskey add CODE` 添加股票。"),
+    "reorder_no_names": ("(name unavailable offline)", "(离线, 无名称)"),
+    "reorder_saved": ("Saved order.", "已保存顺序。"),
+    "reorder_cancelled": ("Cancelled.", "已取消。"),
+    "reorder_grabbed": ("Picked up:", "已拿起:"),
+    "reorder_deleted": ("marked for delete:", "标记删除:"),
 }
 
 
