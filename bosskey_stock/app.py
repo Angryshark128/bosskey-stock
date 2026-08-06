@@ -75,9 +75,9 @@ def _pos_metrics(s, holdings):
     }
 
 
-def _pl_style(v):
-    """收益列着色：正红负绿，零/空无色。"""
-    if v is None or v == 0:
+def _pl_style(v, colorize=True):
+    """收益列着色：正红负绿，零/空无色；单色模式关闭时无色。"""
+    if v is None or v == 0 or not colorize:
         return None
     return "red3" if v > 0 else "green3"
 
@@ -140,7 +140,12 @@ _COL_KEYS = {
 }
 
 
-def _build_table(stocks, holdings, mode, tr):
+def _is_etf(code):
+    """沪 5 开头 / 深 15、16 开头视为 ETF/LOF。"""
+    return code.startswith("5") or code.startswith(("15", "16"))
+
+
+def _build_table(stocks, holdings, mode, tr, colorize=True):
     table = Table(
         box=HORIZONTALS,
         show_header=True,
@@ -164,18 +169,19 @@ def _build_table(stocks, holdings, mode, tr):
         chg = s["change"]
         pct = s["change_pct"]
         up = price is not None and chg is not None and chg >= 0
-        style = "red3" if up else "green3"
+        style = ("red3" if up else "green3") if colorize else None
+        dp = 3 if _is_etf(s["code"]) else 2
 
         row = [
             Text(s["code"], style=style),
             Text(s["name"], style=style),
-            Text(f"{price:.2f}" if price is not None else "--", style=style),
+            Text(f"{price:.{dp}f}" if price is not None else "--", style=style),
             Text(f"{pct:+.2f}%" if pct is not None else "--", style=style),
-            Text(f"{chg:+.2f}" if chg is not None else "--", style=style),
+            Text(f"{chg:+.{dp}f}" if chg is not None else "--", style=style),
             Text(_fmt_vol(s["vol"]), style=style),
-            Text(f"{s['open']:.2f}" if s["open"] is not None else "--", style=style),
-            Text(f"{s['high']:.2f}" if s["high"] is not None else "--", style=style),
-            Text(f"{s['low']:.2f}" if s["low"] is not None else "--", style=style),
+            Text(f"{s['open']:.{dp}f}" if s["open"] is not None else "--", style=style),
+            Text(f"{s['high']:.{dp}f}" if s["high"] is not None else "--", style=style),
+            Text(f"{s['low']:.{dp}f}" if s["low"] is not None else "--", style=style),
         ]
 
         m = _pos_metrics(s, holdings)
@@ -188,14 +194,14 @@ def _build_table(stocks, holdings, mode, tr):
                 row.append(Text("--"))
         if mode >= 2:
             if m:
-                row.append(Text(f"{m['hold_pl']:+,.2f}", style=_pl_style(m["hold_pl"])))
-                row.append(Text(f"{m['hold_pct']:+.2f}%", style=_pl_style(m["hold_pct"])))
+                row.append(Text(f"{m['hold_pl']:+,.2f}", style=_pl_style(m["hold_pl"], colorize)))
+                row.append(Text(f"{m['hold_pct']:+.2f}%", style=_pl_style(m["hold_pct"], colorize)))
             else:
                 row.append(Text("--"))
                 row.append(Text("--"))
         if mode >= 3:
             if m:
-                row.append(Text(f"{m['today_pl']:+,.2f}", style=_pl_style(m["today_pl"])))
+                row.append(Text(f"{m['today_pl']:+,.2f}", style=_pl_style(m["today_pl"], colorize)))
             else:
                 row.append(Text("--"))
 
@@ -229,7 +235,7 @@ def _build_status(stocks, after_hours, offline, update_time, mode, tr):
     return text
 
 
-def _build_summary(stocks, holdings, mode, tr):
+def _build_summary(stocks, holdings, mode, tr, colorize=True):
     """底部汇总：总市值/总成本、总收益（率）、今日收益（率）。仅 mode>0 时调用。"""
     cost_val = 0.0
     pos_val = 0.0
@@ -258,7 +264,7 @@ def _build_summary(stocks, holdings, mode, tr):
         text.append("  ·  ")
         text.append(tr("summary_hold_pl"))
         text.append(" ")
-        text.append(f"{hold_pl:+,.2f} ({hold_pct:+.2f}%)", style=_pl_style(hold_pl))
+        text.append(f"{hold_pl:+,.2f} ({hold_pct:+.2f}%)", style=_pl_style(hold_pl, colorize))
     if mode >= 3:
         denom = prev_val or cost_val
         today_pct = today_pl / denom * 100 if denom else None
@@ -267,7 +273,7 @@ def _build_summary(stocks, holdings, mode, tr):
         text.append(" ")
         text.append(
             f"{today_pl:+,.2f}" + (f" ({today_pct:+.2f}%)" if today_pct is not None else ""),
-            style=_pl_style(today_pl),
+            style=_pl_style(today_pl, colorize),
         )
     return text
 
@@ -277,13 +283,13 @@ def _build_help(tr):
     return Text(tr("help_hint"), style="bright_black")
 
 
-def _build_view(stocks, holdings, mode, after, offline, ts, tr, show_help=False):
+def _build_view(stocks, holdings, mode, after, offline, ts, tr, show_help=False, colorize=True):
     parts = [
-        _build_table(stocks, holdings, mode, tr),
+        _build_table(stocks, holdings, mode, tr, colorize=colorize),
         _build_status(stocks, after, offline, ts, mode, tr),
     ]
     if mode:
-        parts.append(_build_summary(stocks, holdings, mode, tr))
+        parts.append(_build_summary(stocks, holdings, mode, tr, colorize=colorize))
     if show_help:
         parts.append(_build_help(tr))
     return Group(*parts)
@@ -301,6 +307,7 @@ def main_loop(cfg, lang_code=None):
     boss_mode = False
     mode = 0  # 显示模式：0=基础，1..3 渐进展开持仓/收益列
     show_help = False  # h 键：底部快捷键提示
+    colorize = True  # c 键：彩色/单色切换
     lang_state = lang(lang_code if lang_code is not None else cfg["display"].get("lang", "en"))
     tr = lang_state["t"]
 
@@ -321,7 +328,8 @@ def main_loop(cfg, lang_code=None):
             ts = datetime.now().strftime("%H:%M:%S")
             live.update(
                 _build_view(
-                    stocks_cache, holdings, mode, not _in_session(), offline, ts, tr, show_help
+                    stocks_cache, holdings, mode, not _in_session(), offline, ts, tr, show_help,
+                    colorize,
                 ),
                 refresh=True,
             )
@@ -342,6 +350,8 @@ def main_loop(cfg, lang_code=None):
                     tr = lang_state["t"]
                 if key == "h":  # 快捷键提示开关
                     show_help = not show_help
+                if key == "c":  # 彩色/单色切换
+                    colorize = not colorize
                 force = key == "r"
 
                 # ── boss 模式（跳过行情渲染） ──
@@ -365,7 +375,9 @@ def main_loop(cfg, lang_code=None):
                     last_refresh = now.timestamp()
 
                 live.update(
-                    _build_view(stocks_cache, holdings, mode, after, offline, ts, tr, show_help),
+                    _build_view(
+                        stocks_cache, holdings, mode, after, offline, ts, tr, show_help, colorize
+                    ),
                     refresh=True,
                 )
     except KeyboardInterrupt:

@@ -82,6 +82,22 @@ def test_sina_code_sh():
 def test_sina_code_sz():
     assert data._sina_code("000001") == "sz000001"
     assert data._sina_code("300750") == "sz300750"
+    assert data._sina_code("159915") == "sz159915"
+
+
+def test_sina_code_etf():
+    """沪市 ETF（5 开头）应映射到 sh，而不是 sz。"""
+    assert data._sina_code("510050") == "sh510050"
+    assert data._sina_code("588000") == "sh588000"
+    assert data._sina_code("511990") == "sh511990"
+
+
+def test_sina_code_bj():
+    """北交所代码（4/8/92 开头）映射到 bj。"""
+    assert data._sina_code("430047") == "bj430047"
+    assert data._sina_code("832566") == "bj832566"
+    assert data._sina_code("871981") == "bj871981"
+    assert data._sina_code("920002") == "bj920002"
 
 
 def test_fetch_empty():
