@@ -51,19 +51,29 @@ def save(cfg):
 
 def add_codes(*codes):
     cfg = load()
-    existing = set(cfg["watchlist"]["codes"])
+    existing = cfg["watchlist"]["codes"]
+    seen = set(existing)
     for c in codes:
-        existing.add(c)
-    cfg["watchlist"]["codes"] = sorted(existing)
+        if c not in seen:
+            existing.append(c)
+            seen.add(c)
     save(cfg)
 
 
 def remove_codes(*codes):
     cfg = load()
-    existing = set(cfg["watchlist"]["codes"])
-    for c in codes:
-        existing.discard(c)
-    cfg["watchlist"]["codes"] = sorted(existing)
+    removed = set(codes)
+    cfg["watchlist"]["codes"] = [c for c in cfg["watchlist"]["codes"] if c not in removed]
+    save(cfg)
+
+
+def reorder_codes(new_order):
+    """将监控列表重排为 new_order（须为当前代码集合的排列）。"""
+    cfg = load()
+    current = cfg["watchlist"]["codes"]
+    if set(new_order) != set(current) or len(new_order) != len(current):
+        raise ValueError("new_order must be a permutation of the current codes")
+    cfg["watchlist"]["codes"] = list(new_order)
     save(cfg)
 
 

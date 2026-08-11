@@ -63,6 +63,53 @@ def test_add_duplicates():
             cfg.CONFIG_PATH = orig
 
 
+def test_add_preserves_insertion_order():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            # 默认已有 [000001, 600519, 300750]；追加新代码到末尾，已有顺序不变
+            cfg.add_codes("000858")
+            assert cfg.list_codes() == ["000001", "600519", "300750", "000858"]
+            cfg.add_codes("600519", "000001")  # 重复代码不重复追加
+            assert cfg.list_codes() == ["000001", "600519", "300750", "000858"]
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_remove_preserves_order():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.remove_codes("600519")
+            assert cfg.list_codes() == ["000001", "300750"]
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_reorder_codes():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.reorder_codes(["300750", "000001", "600519"])
+            assert cfg.list_codes() == ["300750", "000001", "600519"]
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_reorder_codes_rejects_non_permutation():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            try:
+                cfg.reorder_codes(["000001", "600519"])  # 缺一个
+                assert False, "应拒绝非排列的 new_order"
+            except ValueError:
+                pass
+            assert cfg.list_codes() == ["000001", "600519", "300750"]  # 未改动
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
 def test_remove_nonexistent():
     with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
         cfg, orig = _monkey_patch_cfg(tmp)
