@@ -195,8 +195,8 @@ bosskey-stock/
 
 | | 贡献 |
 | --- | --- |
-| [![mcxue](https://github.com/mcxue.png?size=48)](https://github.com/mcxue) | **[@mcxue](https://github.com/mcxue)** — 代码贡献：单色模式（`c` 键切换）、`list -i` 交互式排序/删除、ETF 与北交所（4/8/92 开头）代码支持（[PR #3](https://github.com/Angryshark128/bosskey-stock/pull/3)） |
-| [![vhmlee-dev](https://github.com/vhmlee-dev.png?size=48)](https://github.com/vhmlee-dev) | **[@vhmlee-dev](https://github.com/vhmlee-dev)** — 提出 ETF 支持需求（[Issue #4](https://github.com/Angryshark128/bosskey-stock/issues/4)） |
+| [<img src="https://github.com/mcxue.png?size=64" width="32" height="32" alt="mcxue">](https://github.com/mcxue) | **[@mcxue](https://github.com/mcxue)** — 代码贡献：单色模式（`c` 键切换）、`list -i` 交互式排序/删除、ETF 与北交所（4/8/92 开头）代码支持（[PR #3](https://github.com/Angryshark128/bosskey-stock/pull/3)） |
+| [<img src="https://github.com/vhmlee-dev.png?size=64" width="32" height="32" alt="vhmlee-dev">](https://github.com/vhmlee-dev) | **[@vhmlee-dev](https://github.com/vhmlee-dev)** — 提出 ETF 支持需求（[Issue #4](https://github.com/Angryshark128/bosskey-stock/issues/4)） |
 
 ## License
 
