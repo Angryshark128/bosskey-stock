@@ -89,7 +89,8 @@ def _parse(line):
     }
 
     if price is not None and pre_close and pre_close != 0:
-        chg = round(price - pre_close, 2)
+        dp = 3 if _is_etf(code) else 2  # ETF 净值精确到 3 位
+        chg = round(price - pre_close, dp)
         s["change"] = chg
         s["change_pct"] = round(chg / pre_close * 100, 2)
     else:

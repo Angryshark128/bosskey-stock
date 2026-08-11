@@ -140,11 +140,6 @@ _COL_KEYS = {
 }
 
 
-def _is_etf(code):
-    """沪 5 开头 / 深 15、16 开头视为 ETF/LOF。"""
-    return code.startswith("5") or code.startswith(("15", "16"))
-
-
 def _build_table(stocks, holdings, mode, tr, colorize=True):
     table = Table(
         box=HORIZONTALS,

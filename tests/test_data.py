@@ -125,8 +125,8 @@ def test_parse_etf():
     assert s["name"] == "沪深300ETF"
     assert s["price"] == 4.728
     assert s["vol"] == 535321917
-    assert s["change"] == -0.03
-    assert s["change_pct"] == pytest.approx(-0.63, rel=0.01)
+    assert s["change"] == -0.031
+    assert s["change_pct"] == pytest.approx(-0.65, rel=0.01)
 
 
 def test_fetch_empty():

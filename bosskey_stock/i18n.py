@@ -93,8 +93,14 @@ _T = {
     "help_run": ("Start the monitoring UI (default)", "启动盯盘界面 (默认)"),
     # Reorder TUI
     "reorder_loading": ("Fetching names...", "正在获取名称..."),
-    "reorder_title": ("Reorder/delete (↑/↓ or k/j move · Space pick/drop · d mark delete · s save · q cancel)", "调整顺序/删除 (↑/↓ 或 k/j 移动 · 空格 拿起/放下 · d 标记删除 · s 保存 · q 取消)"),
-    "reorder_empty": ("Watchlist is empty. Use `bosskey add CODE` first.", "监控列表为空, 请先 `bosskey add CODE` 添加股票。"),
+    "reorder_title": (
+        "Reorder/delete (↑/↓ or k/j move · Space pick/drop · d mark delete · s save · q cancel)",
+        "调整顺序/删除 (↑/↓ 或 k/j 移动 · 空格 拿起/放下 · d 标记删除 · s 保存 · q 取消)",
+    ),
+    "reorder_empty": (
+        "Watchlist is empty. Use `bosskey add CODE` first.",
+        "监控列表为空, 请先 `bosskey add CODE` 添加股票。",
+    ),
     "reorder_no_names": ("(name unavailable offline)", "(离线, 无名称)"),
     "reorder_saved": ("Saved order.", "已保存顺序。"),
     "reorder_cancelled": ("Cancelled.", "已取消。"),
