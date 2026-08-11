@@ -17,7 +17,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .boss import BossGenerator
-from .data import fetch
+from .data import _is_etf, fetch
 from .i18n import lang
 
 # ── 交易时段 ────────────────────────────────────────────
@@ -165,17 +165,18 @@ def _build_table(stocks, holdings, mode, tr):
         pct = s["change_pct"]
         up = price is not None and chg is not None and chg >= 0
         style = "red3" if up else "green3"
+        dp = 3 if _is_etf(s["code"]) else 2  # ETF 净值精确到 3 位
 
         row = [
             Text(s["code"], style=style),
             Text(s["name"], style=style),
-            Text(f"{price:.2f}" if price is not None else "--", style=style),
+            Text(f"{price:.{dp}f}" if price is not None else "--", style=style),
             Text(f"{pct:+.2f}%" if pct is not None else "--", style=style),
             Text(f"{chg:+.2f}" if chg is not None else "--", style=style),
             Text(_fmt_vol(s["vol"]), style=style),
-            Text(f"{s['open']:.2f}" if s["open"] is not None else "--", style=style),
-            Text(f"{s['high']:.2f}" if s["high"] is not None else "--", style=style),
-            Text(f"{s['low']:.2f}" if s["low"] is not None else "--", style=style),
+            Text(f"{s['open']:.{dp}f}" if s["open"] is not None else "--", style=style),
+            Text(f"{s['high']:.{dp}f}" if s["high"] is not None else "--", style=style),
+            Text(f"{s['low']:.{dp}f}" if s["low"] is not None else "--", style=style),
         ]
 
         m = _pos_metrics(s, holdings)

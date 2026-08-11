@@ -87,6 +87,14 @@ def test_sina_code_sz():
     assert data._sina_code("159915") == "sz159915"  # 深市 ETF
 
 
+def test_is_etf():
+    assert data._is_etf("510300") is True
+    assert data._is_etf("588000") is True
+    assert data._is_etf("159915") is True
+    assert data._is_etf("600519") is False
+    assert data._is_etf("000001") is False
+
+
 def test_parse_etf():
     """ETF 行情与股票同字段布局（510300 沪深300ETF 实测格式）"""
     fields = (

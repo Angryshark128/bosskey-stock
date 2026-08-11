@@ -70,6 +70,21 @@ def test_build_table_columns_grow_with_mode():
     assert "今日盈亏%" not in headers
 
 
+def test_build_table_etf_price_precision():
+    """ETF 价格显示 3 位小数（4.728 不四舍五入成 4.73），股票仍 2 位"""
+    etf = _stock()
+    etf["code"] = "510300"
+    etf["price"] = 4.728
+    etf["open"] = 4.750
+    tr = lang("en")["t"]
+    table = _build_table([etf], {}, 0, tr)
+    assert "4.728" in table.columns[2]._cells[0].plain  # Price
+    assert "4.750" in table.columns[6]._cells[0].plain  # Open
+    # 股票保持 2 位
+    stk_table = _build_table([_stock()], {}, 0, tr)
+    assert "1690.00" in stk_table.columns[2]._cells[0].plain
+
+
 def test_build_summary_modes():
     # price 1690.0, cost 1600.0, shares 100 → pos 169000, cost 160000,
     # hold_pl +9000 (5.62%), today_pl +1500 (0.90% vs pre_close 1675*100)

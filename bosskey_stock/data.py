@@ -15,6 +15,11 @@ def _sina_code(raw):
     return f"sz{raw}"
 
 
+def _is_etf(code):
+    """判断是否为 ETF/LOF：沪 5 开头（51/56/58），深 15/16 开头（159 等）。"""
+    return code.startswith("5") or code.startswith(("15", "16"))
+
+
 def _build_url(codes):
     return SINA_URL.format(",".join(_sina_code(c) for c in codes))
 
