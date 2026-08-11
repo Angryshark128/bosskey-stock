@@ -9,8 +9,8 @@ HEADERS = {"Referer": "https://finance.sina.com.cn"}
 
 
 def _sina_code(raw):
-    """A股代码转 Sina 前缀。"""
-    if raw.startswith(("6", "9")):
+    """A股/ETF 代码转 Sina 前缀（沪：5/6/9 开头，其余归深）。"""
+    if raw.startswith(("5", "6", "9")):
         return f"sh{raw}"
     return f"sz{raw}"
 

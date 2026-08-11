@@ -77,11 +77,33 @@ def test_parse_zero_pre_close():
 def test_sina_code_sh():
     assert data._sina_code("600519") == "sh600519"
     assert data._sina_code("900901") == "sh900901"
+    assert data._sina_code("510300") == "sh510300"  # 沪市 ETF
+    assert data._sina_code("588000") == "sh588000"  # 沪市 ETF
 
 
 def test_sina_code_sz():
     assert data._sina_code("000001") == "sz000001"
     assert data._sina_code("300750") == "sz300750"
+    assert data._sina_code("159915") == "sz159915"  # 深市 ETF
+
+
+def test_parse_etf():
+    """ETF 行情与股票同字段布局（510300 沪深300ETF 实测格式）"""
+    fields = (
+        ["沪深300ETF", "4.750", "4.759", "4.728", "4.775", "4.722", "4.727", "4.728"]
+        + ["535321917", "2541400132"]
+        + [""] * 20
+        + ["2026-07-30", "16:30:00"]
+    )
+    line = _make_sina_line("510300", *fields)
+    s = data._parse(line)
+    assert s is not None
+    assert s["code"] == "510300"
+    assert s["name"] == "沪深300ETF"
+    assert s["price"] == 4.728
+    assert s["vol"] == 535321917
+    assert s["change"] == -0.03
+    assert s["change_pct"] == pytest.approx(-0.63, rel=0.01)
 
 
 def test_fetch_empty():
