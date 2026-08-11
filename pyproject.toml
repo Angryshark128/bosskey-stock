@@ -29,8 +29,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/shark/bosskey-stock"
-Repository = "https://github.com/shark/bosskey-stock"
+Homepage = "https://github.com/Angryshark128/bosskey-stock"
+Repository = "https://github.com/Angryshark128/bosskey-stock"
 
 [project.scripts]
 bosskey = "bosskey_stock.__main__:main"

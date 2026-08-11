@@ -67,7 +67,7 @@ pip install bosskey-stock
 ### 从源码
 
 ```bash
-git clone https://github.com/shark/bosskey-stock.git
+git clone https://github.com/Angryshark128/bosskey-stock.git
 cd bosskey-stock
 pip install -e .
 ```
