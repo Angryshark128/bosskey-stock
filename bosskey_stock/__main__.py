@@ -37,6 +37,7 @@ def _build_parser(tr):
 
     p_add = sub.add_parser("add", help=tr("help_add"))
     p_add.add_argument("codes", nargs="+", metavar="CODE", help=tr("help_add_codes"))
+    p_add.add_argument("--group", metavar="NAME", help=tr("help_add_group"))
 
     p_rm = sub.add_parser("rm", help=tr("help_rm"))
     p_rm.add_argument("codes", nargs="+", metavar="CODE", help=tr("help_rm_codes"))
@@ -48,6 +49,31 @@ def _build_parser(tr):
         action="store_true",
         help=tr("help_list_interactive"),
     )
+    p_list.add_argument("--group", metavar="NAME", help=tr("help_list_group"))
+
+    p_group = sub.add_parser("group", help=tr("help_group"))
+    pg = p_group.add_subparsers(dest="group_cmd", metavar="SUBCOMMAND", required=True)
+
+    pg_add = pg.add_parser("add", help=tr("help_group_add"))
+    pg_add.add_argument("name", metavar="NAME", help=tr("help_group_name"))
+    pg_add.add_argument("codes", nargs="*", metavar="CODE", help=tr("help_group_codes"))
+
+    pg_rm = pg.add_parser("rm", help=tr("help_group_rm"))
+    pg_rm.add_argument("name", metavar="NAME", help=tr("help_group_name"))
+
+    pg_ren = pg.add_parser("rename", help=tr("help_group_rename"))
+    pg_ren.add_argument("old", metavar="OLD", help=tr("help_group_name"))
+    pg_ren.add_argument("new", metavar="NEW", help=tr("help_group_name"))
+
+    pg.add_parser("list", help=tr("help_group_list"))
+
+    pg_ac = pg.add_parser("add-codes", help=tr("help_group_add_codes"))
+    pg_ac.add_argument("name", metavar="NAME", help=tr("help_group_name"))
+    pg_ac.add_argument("codes", nargs="+", metavar="CODE", help=tr("help_add_codes"))
+
+    pg_rc = pg.add_parser("rm-codes", help=tr("help_group_rm_codes"))
+    pg_rc.add_argument("name", metavar="NAME", help=tr("help_group_name"))
+    pg_rc.add_argument("codes", nargs="+", metavar="CODE", help=tr("help_add_codes"))
 
     p_pos = sub.add_parser("pos", help=tr("help_pos"))
     ppos = p_pos.add_subparsers(dest="pos_cmd", metavar="SUBCOMMAND", required=True)
@@ -134,6 +160,45 @@ def _print_positions(positions, tr):
         print(f"  {code}  {h['shares']:,}{unit}  cost {_fmt_money(h['cost'])}")
 
 
+def _run_group_cmd(args, tr):
+    sub = args.group_cmd
+    try:
+        if sub == "add":
+            config.group_add(args.name, *args.codes)
+            print(
+                tr(
+                    "group_added",
+                    name=args.name,
+                    codes=", ".join(args.codes) if args.codes else "-",
+                )
+            )
+        elif sub == "rm":
+            config.group_remove(args.name)
+            print(tr("group_removed", name=args.name))
+        elif sub == "rename":
+            config.group_rename(args.old, args.new)
+            print(tr("group_renamed", old=args.old, new=args.new))
+        elif sub == "add-codes":
+            config.group_add_codes(args.name, *args.codes)
+            print(tr("group_codes_added", name=args.name, codes=", ".join(args.codes)))
+        elif sub == "rm-codes":
+            config.group_remove_codes(args.name, *args.codes)
+            print(tr("group_codes_removed", name=args.name, codes=", ".join(args.codes)))
+        elif sub == "list":
+            groups = config.get_groups()
+            if not groups:
+                print(tr("group_empty"))
+            else:
+                print(tr("cli_groups"))
+                for name, codes in groups.items():
+                    line = f"  {name}"
+                    if codes:
+                        line += f": {' '.join(codes)}"
+                    print(line)
+    except config.GroupError as e:
+        print(tr(e.key, **e.fmt))
+
+
 # ── 交互式 reorder/删除 (list -i) ──────────────────────
 
 
@@ -167,8 +232,15 @@ def _reorder_read_key(fd):
     return b[0:1].decode("utf-8", errors="replace")
 
 
-def _interactive_reorder(tr):
-    codes = config.list_codes()
+def _interactive_reorder(tr, group=None):
+    if group is None:
+        codes = config.list_codes()
+    else:
+        groups = config.get_groups()
+        if group not in groups:
+            print(tr("group_not_found", name=group))
+            return
+        codes = groups[group]
     if not codes:
         print(tr("reorder_empty"))
         return
@@ -192,7 +264,7 @@ def _interactive_reorder(tr):
         _setup_reorder_tty(fd)
         with console.screen() as screen:
             while True:
-                _render_reorder(screen, order, names, cursor, grabbed, deleted, tr)
+                _render_reorder(screen, order, names, cursor, grabbed, deleted, tr, group)
 
                 key = _reorder_read_key(fd)
                 if key is None:
@@ -201,7 +273,10 @@ def _interactive_reorder(tr):
                     console.print(tr("reorder_cancelled"))
                     return
                 if key == "s":  # 保存：先按完整 order 排序，再删除标记项
-                    config.reorder_codes(order)
+                    if group is None:
+                        config.reorder_codes(order)
+                    else:
+                        config.reorder_group(group, order)
                     if deleted:
                         config.remove_codes(*deleted)
                     console.print(tr("reorder_saved"))
@@ -251,7 +326,7 @@ def _setup_reorder_tty(fd):
     termios.tcsetattr(fd, termios.TCSAFLUSH, attrs)
 
 
-def _render_reorder(screen, order, names, cursor, grabbed, deleted, tr):
+def _render_reorder(screen, order, names, cursor, grabbed, deleted, tr, group=None):
     table = Table(box=None, show_header=True, show_edge=False, padding=(0, 1))
     table.add_column("#", justify="right")
     table.add_column(tr("col_code"))
@@ -273,6 +348,8 @@ def _render_reorder(screen, order, names, cursor, grabbed, deleted, tr):
         )
 
     title = tr("reorder_title")
+    if group:
+        title += f"  [{group}]"
     if grabbed is not None:
         title += f"  {tr('reorder_grabbed')} {order[grabbed]}"
     if deleted:
@@ -313,21 +390,37 @@ def main():
 
     if cmd == "add":
         config.add_codes(*args.codes)
+        if args.group:
+            if args.group in config.get_groups():
+                config.group_add_codes(args.group, *args.codes)
+            else:
+                config.group_add(args.group, *args.codes)
         print(tr("cli_added", codes=", ".join(args.codes)))
     elif cmd == "rm":
         config.remove_codes(*args.codes)
         print(tr("cli_removed", codes=", ".join(args.codes)))
     elif cmd == "list":
         if args.interactive:
-            _interactive_reorder(tr)
+            _interactive_reorder(tr, group=args.group)
         else:
-            codes = config.list_codes()
+            if args.group:
+                groups = config.get_groups()
+                if args.group not in groups:
+                    print(tr("group_not_found", name=args.group))
+                    return
+                codes = groups[args.group]
+                title = tr("cli_group_watchlist", name=args.group)
+            else:
+                codes = config.list_codes()
+                title = tr("cli_watchlist")
             if codes:
-                print(tr("cli_watchlist"))
+                print(title)
                 for c in codes:
                     print(f"  {c}")
             else:
                 print(tr("cli_watchlist_empty"))
+    elif cmd == "group":
+        _run_group_cmd(args, tr)
     elif cmd == "pos":
         sub = args.pos_cmd
         if sub == "add":

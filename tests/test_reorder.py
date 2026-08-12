@@ -30,6 +30,67 @@ def test_reorder_subcommand_removed():
         _parser().parse_args(["reorder"])
 
 
+# ── group 子命令与 --group 参数解析 ──────────────────────
+
+
+def test_list_group_plain():
+    args = _parser().parse_args(["list", "--group", "持仓"])
+    assert args.group == "持仓"
+    assert args.interactive is False
+
+
+def test_list_group_interactive():
+    args = _parser().parse_args(["list", "-i", "--group", "持仓"])
+    assert args.group == "持仓"
+    assert args.interactive is True
+
+
+def test_add_group_flag():
+    args = _parser().parse_args(["add", "600519", "--group", "持仓"])
+    assert args.group == "持仓"
+
+
+def test_group_subcommand_add():
+    args = _parser().parse_args(["group", "add", "持仓", "600519", "000001"])
+    assert args.group_cmd == "add"
+    assert args.name == "持仓"
+    assert args.codes == ["600519", "000001"]
+
+
+def test_group_subcommand_add_no_codes():
+    args = _parser().parse_args(["group", "add", "空组"])
+    assert args.group_cmd == "add"
+    assert args.codes == []
+
+
+def test_group_subcommand_rm():
+    args = _parser().parse_args(["group", "rm", "持仓"])
+    assert args.group_cmd == "rm"
+    assert args.name == "持仓"
+
+
+def test_group_subcommand_rename():
+    args = _parser().parse_args(["group", "rename", "A", "B"])
+    assert args.group_cmd == "rename"
+    assert args.old == "A"
+    assert args.new == "B"
+
+
+def test_group_subcommand_list():
+    args = _parser().parse_args(["group", "list"])
+    assert args.group_cmd == "list"
+
+
+def test_group_subcommand_add_codes():
+    args = _parser().parse_args(["group", "add-codes", "持仓", "600519"])
+    assert args.group_cmd == "add-codes"
+
+
+def test_group_subcommand_rm_codes():
+    args = _parser().parse_args(["group", "rm-codes", "持仓", "600519"])
+    assert args.group_cmd == "rm-codes"
+
+
 
 def test_move_up_middle():
     lst, idx = _reorder_move_up(["a", "b", "c"], 1)

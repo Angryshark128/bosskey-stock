@@ -41,9 +41,22 @@ _T = {
     "boss_running": ("Running time: {elapsed}", "运行时间: {elapsed}"),
     # 快捷键提示
     "help_hint": (
-        "q quit · r refresh · t columns · c color · b boss mode · l language · h help",
-        "q 退出 · r 刷新 · t 列模式 · c 单色 · b 老板模式 · l 中英 · h 隐藏提示",
+        "q quit · r refresh · t columns · c color · b boss mode · l language · g group · h help",
+        "q 退出 · r 刷新 · t 列模式 · c 单色 · b 老板模式 · l 中英 · g 分组 · h 隐藏提示",
     ),
+    # 分组（状态栏 / CLI）
+    "group_status": ("Group: {name}", "分组: {name}"),
+    "cli_groups": ("Groups:", "分组:"),
+    "group_empty": ("No groups.", "暂无分组。"),
+    "group_added": ("Group created: {name} [{codes}]", "已创建分组: {name} [{codes}]"),
+    "group_removed": ("Group removed: {name}", "已删除分组: {name}"),
+    "group_renamed": ("Renamed: {old} → {new}", "已重命名: {old} → {new}"),
+    "group_codes_added": ("Added to {name}: {codes}", "已加入 {name}: {codes}"),
+    "group_codes_removed": ("Removed from {name}: {codes}", "已从 {name} 移除: {codes}"),
+    "group_exists": ("Group already exists: {name}", "分组已存在: {name}"),
+    "group_not_found": ("Group not found: {name}", "分组不存在: {name}"),
+    "group_name_empty": ("Group name must not be empty.", "分组名不能为空。"),
+    "cli_group_watchlist": ("Group [{name}]:", "分组 [{name}]:"),
     # CLI
     "cli_added": ("Added: {codes}", "已添加: {codes}"),
     "cli_removed": ("Removed: {codes}", "已移除: {codes}"),
@@ -91,6 +104,21 @@ _T = {
     "help_pos_rm_code": ("stock code", "股票代码"),
     "help_pos_list": ("Show all positions", "查看全部持仓"),
     "help_run": ("Start the monitoring UI (default)", "启动盯盘界面 (默认)"),
+    # CLI group 子命令
+    "help_group": ("Manage watchlist groups", "管理监控列表分组"),
+    "help_group_add": ("Create a group with codes", "创建分组并归入代码"),
+    "help_group_rm": ("Remove a group (codes kept)", "删除分组 (代码保留)"),
+    "help_group_rename": ("Rename a group", "重命名分组"),
+    "help_group_list": ("List all groups", "查看全部分组"),
+    "help_group_add_codes": ("Add codes to a group", "向分组添加代码"),
+    "help_group_rm_codes": ("Remove codes from a group", "从分组移除代码"),
+    "help_group_name": ("group name", "分组名"),
+    "help_group_codes": ("stock codes (optional)", "股票代码 (可选)"),
+    "help_add_group": (
+        "assign codes to this group (auto-create if missing)",
+        "归入该分组 (不存在则自动创建)",
+    ),
+    "help_list_group": ("only show this group", "只显示该分组"),
     # Reorder TUI
     "reorder_loading": ("Fetching names...", "正在获取名称..."),
     "reorder_title": (

@@ -203,3 +203,205 @@ def test_get_lang_unknown_falls_back_en():
             assert cfg.get_lang() == "en"
         finally:
             cfg.CONFIG_PATH = orig
+
+
+# ── 分组 ──────────────────────────────────────────────
+
+
+def test_group_add_and_get():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("持仓", "600519", "000001")
+            cfg.group_add("ETF", "510300")
+            groups = cfg.get_groups()
+            assert groups == {"持仓": ["600519", "000001"], "ETF": ["510300"]}
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_add_joins_watchlist():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("新票", "888888", "999999")
+            assert "888888" in cfg.list_codes()
+            assert "999999" in cfg.list_codes()
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_add_duplicate_name():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("持仓", "600519")
+            try:
+                cfg.group_add("持仓", "000001")
+                assert False, "重名分组应被拒绝"
+            except cfg.GroupError as e:
+                assert e.key == "group_exists"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_add_empty_name():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            try:
+                cfg.group_add("   ", "600519")
+                assert False, "空分组名应被拒绝"
+            except cfg.GroupError as e:
+                assert e.key == "group_name_empty"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_remove_keeps_codes():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("持仓", "600519")
+            cfg.group_remove("持仓")
+            assert cfg.get_groups() == {}
+            assert "600519" in cfg.list_codes()  # 代码保留
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_remove_not_found():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            try:
+                cfg.group_remove("不存在")
+                assert False, "不存在的组应报错"
+            except cfg.GroupError as e:
+                assert e.key == "group_not_found"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_rename():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("持仓", "600519", "000001")
+            cfg.group_rename("持仓", "自选")
+            assert cfg.get_groups() == {"自选": ["600519", "000001"]}
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_rename_duplicate_target():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("A", "600519")
+            cfg.group_add("B", "000001")
+            try:
+                cfg.group_rename("A", "B")
+                assert False, "重名目标应被拒绝"
+            except cfg.GroupError as e:
+                assert e.key == "group_exists"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_rename_missing():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            try:
+                cfg.group_rename("不存在", "X")
+                assert False
+            except cfg.GroupError as e:
+                assert e.key == "group_not_found"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_rename_same_name_noop():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("A", "600519")
+            cfg.group_rename("A", "A")  # 同名不报错、不改变
+            assert cfg.get_groups() == {"A": ["600519"]}
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_add_codes():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("持仓", "600519")
+            cfg.group_add_codes("持仓", "000001", "000001", "888888")  # 去重 + 自动进 watchlist
+            assert cfg.get_groups() == {"持仓": ["600519", "000001", "888888"]}
+            assert "888888" in cfg.list_codes()
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_add_codes_not_found():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            try:
+                cfg.group_add_codes("不存在", "600519")
+                assert False
+            except cfg.GroupError as e:
+                assert e.key == "group_not_found"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_group_remove_codes_keeps_empty_group():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("持仓", "600519", "000001")
+            cfg.group_remove_codes("持仓", "600519", "000001")
+            assert cfg.get_groups() == {"持仓": []}  # 空组保留
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_reorder_group():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("持仓", "600519", "000001", "300750")
+            cfg.reorder_group("持仓", ["300750", "600519", "000001"])
+            assert cfg.get_groups() == {"持仓": ["300750", "600519", "000001"]}
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_reorder_group_rejects_non_permutation():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("持仓", "600519", "000001")
+            try:
+                cfg.reorder_group("持仓", ["600519"])  # 缺一个
+                assert False, "应拒绝非排列"
+            except ValueError:
+                pass
+            assert cfg.get_groups() == {"持仓": ["600519", "000001"]}  # 未改动
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_remove_codes_cleans_groups():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.group_add("A", "600519", "000001")
+            cfg.group_add("B", "600519")
+            cfg.remove_codes("600519")
+            assert cfg.get_groups() == {"A": ["000001"], "B": []}  # 组内同步清除
+        finally:
+            cfg.CONFIG_PATH = orig

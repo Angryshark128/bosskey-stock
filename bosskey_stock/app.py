@@ -205,7 +205,7 @@ def _build_table(stocks, holdings, mode, tr, colorize=True):
     return table
 
 
-def _build_status(stocks, after_hours, offline, update_time, mode, tr):
+def _build_status(stocks, after_hours, offline, update_time, mode, tr, group_name=None):
     text = Text()
     if offline:
         text.append(tr("offline"), style="yellow bold")
@@ -218,6 +218,8 @@ def _build_status(stocks, after_hours, offline, update_time, mode, tr):
     else:
         text.append(f"{tr('last_update')} {update_time}")
 
+    if group_name:
+        text.append(f"  {tr('group_status', name=group_name)}", style="bright_black")
     if mode:
         labels = []
         if mode >= 1:
@@ -278,10 +280,13 @@ def _build_help(tr):
     return Text(tr("help_hint"), style="bright_black")
 
 
-def _build_view(stocks, holdings, mode, after, offline, ts, tr, show_help=False, colorize=True):
+def _build_view(
+    stocks, holdings, mode, after, offline, ts, tr, show_help=False, colorize=True,
+    group_name=None,
+):
     parts = [
         _build_table(stocks, holdings, mode, tr, colorize=colorize),
-        _build_status(stocks, after, offline, ts, mode, tr),
+        _build_status(stocks, after, offline, ts, mode, tr, group_name=group_name),
     ]
     if mode:
         parts.append(_build_summary(stocks, holdings, mode, tr, colorize=colorize))
@@ -293,9 +298,19 @@ def _build_view(stocks, holdings, mode, after, offline, ts, tr, show_help=False,
 # ── 主循环 ──────────────────────────────────────────────
 
 
+def _group_filter(stocks, groups, group_view):
+    """按当前分组过滤并按组内顺序排列；group_view=None 时原样返回。"""
+    if group_view is None:
+        return stocks
+    by_code = {s["code"]: s for s in stocks}
+    return [by_code[c] for c in groups.get(group_view, []) if c in by_code]
+
+
 def main_loop(cfg, lang_code=None):
     codes = cfg["watchlist"]["codes"]
     holdings = dict(cfg.get("holdings") or {})
+    groups = dict((cfg.get("watchlist") or {}).get("groups") or {})
+    group_names = list(groups.keys())
     interval = cfg["display"]["refresh_interval"]
 
     boss = BossGenerator()
@@ -303,6 +318,7 @@ def main_loop(cfg, lang_code=None):
     mode = 0  # 显示模式：0=基础，1..3 渐进展开持仓/收益列
     show_help = False  # h 键：底部快捷键提示
     colorize = True  # c 键：彩色/单色切换
+    group_view = None  # g 键：None=全部，否则当前分组名
     lang_state = lang(lang_code if lang_code is not None else cfg["display"].get("lang", "en"))
     tr = lang_state["t"]
 
@@ -323,8 +339,8 @@ def main_loop(cfg, lang_code=None):
             ts = datetime.now().strftime("%H:%M:%S")
             live.update(
                 _build_view(
-                    stocks_cache, holdings, mode, not _in_session(), offline, ts, tr, show_help,
-                    colorize,
+                    _group_filter(stocks_cache, groups, group_view), holdings, mode,
+                    not _in_session(), offline, ts, tr, show_help, colorize, group_view,
                 ),
                 refresh=True,
             )
@@ -340,6 +356,16 @@ def main_loop(cfg, lang_code=None):
                         boss.reset()
                 if key == "t":
                     mode = (mode + 1) % _DISPLAY_MODES
+                if key == "g":  # 分组循环：全部 → 组1 → … → 组n → 全部
+                    if group_names:
+                        if group_view is None:
+                            group_view = group_names[0]
+                        else:
+                            idx = group_names.index(group_view)
+                            if idx + 1 < len(group_names):
+                                group_view = group_names[idx + 1]
+                            else:
+                                group_view = None
                 if key == "l":  # 中英切换（会话内，不持久化）
                     lang_state = lang("zh" if lang_state["code"] == "en" else "en")
                     tr = lang_state["t"]
@@ -371,7 +397,8 @@ def main_loop(cfg, lang_code=None):
 
                 live.update(
                     _build_view(
-                        stocks_cache, holdings, mode, after, offline, ts, tr, show_help, colorize
+                        _group_filter(stocks_cache, groups, group_view), holdings, mode,
+                        after, offline, ts, tr, show_help, colorize, group_view,
                     ),
                     refresh=True,
                 )

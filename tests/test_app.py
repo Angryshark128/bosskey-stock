@@ -123,3 +123,29 @@ def test_build_view_help_hidden_by_default():
     v2 = _build_view(stocks, {}, 0, False, False, "14:32:05", tr, show_help=True)
     assert len(v2.renderables) == 3  # 追加帮助行
     assert "q quit" in v2.renderables[2].plain
+
+
+def test_group_filter_all():
+    """group_view=None 时原样返回。"""
+    from bosskey_stock.app import _group_filter
+
+    stocks = [{"code": "600519"}, {"code": "000001"}]
+    assert _group_filter(stocks, {}, None) is stocks
+
+
+def test_group_filter_by_group_order():
+    """分组视图按组内顺序排列，忽略全局顺序；无行情的组内代码跳过。"""
+    from bosskey_stock.app import _group_filter
+
+    stocks = [{"code": "600519"}, {"code": "000001"}, {"code": "300750"}]
+    groups = {"持仓": ["000001", "600519"], "自选": ["888888"]}
+    assert [s["code"] for s in _group_filter(stocks, groups, "持仓")] == ["000001", "600519"]
+    assert [s["code"] for s in _group_filter(stocks, groups, "自选")] == []  # 无行情跳过
+
+
+def test_group_filter_missing_group():
+    """分组不存在时为空列表。"""
+    from bosskey_stock.app import _group_filter
+
+    stocks = [{"code": "600519"}]
+    assert _group_filter(stocks, {}, "不存在") == []

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0] - 2026-08-12
+
+### Added
+
+- 分组：监控列表支持分组管理，TUI 按 `g` 循环切换分组视图（组内独立排序、状态栏显示当前分组、底部收益汇总只统计当前分组）。
+- CLI `group` 子命令：`group add/rm/rename/list/add-codes/rm-codes`；`add` 支持 `--group`（不存在自动建组）；`list` 支持 `--group` 过滤、`list -i --group` 组内交互排序。
+- 分组名唯一性校验：重名/空名报错拒绝。
+
+### Changed
+
+- `rm` / `list -i` 删除代码时同步从所有分组移除，避免残留。
+- 配置新增 `watchlist.groups`（旧配置自动兼容，视为全部未分组）。
+
 ## [0.2.5] - 2026-08-12
 
 ### Fixed
