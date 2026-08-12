@@ -149,3 +149,17 @@ def test_group_filter_missing_group():
 
     stocks = [{"code": "600519"}]
     assert _group_filter(stocks, {}, "不存在") == []
+
+
+def test_build_table_group_title():
+    """有分组时表格标题始终显示当前视图（分组名 / 全部），无分组时无标题。"""
+    from bosskey_stock.app import _build_table
+
+    tr = lang("zh")["t"]
+    stocks = [_stock()]
+    t1 = _build_table(stocks, {}, 0, tr, group_name="持仓", has_groups=True)
+    assert t1.title == "分组: 持仓"
+    t2 = _build_table(stocks, {}, 0, tr, group_name=None, has_groups=True)
+    assert t2.title == "全部"
+    t3 = _build_table(stocks, {}, 0, tr)
+    assert t3.title is None  # 无分组时保持极简

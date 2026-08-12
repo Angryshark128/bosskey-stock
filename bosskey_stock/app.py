@@ -140,7 +140,11 @@ _COL_KEYS = {
 }
 
 
-def _build_table(stocks, holdings, mode, tr, colorize=True):
+def _build_table(stocks, holdings, mode, tr, colorize=True, group_name=None, has_groups=False):
+    # 表格标题：始终指明当前视图（分组名或「全部」），有分组时才显示
+    title = None
+    if has_groups:
+        title = tr("group_status", name=group_name) if group_name else tr("view_all")
     table = Table(
         box=HORIZONTALS,
         show_header=True,
@@ -148,6 +152,8 @@ def _build_table(stocks, holdings, mode, tr, colorize=True):
         show_edge=False,
         show_lines=True,
         padding=(0, 1),
+        title=title or None,
+        title_style="bold yellow",
     )
     cols = list(_BASE_COLS)
     if mode >= 1:
@@ -205,7 +211,7 @@ def _build_table(stocks, holdings, mode, tr, colorize=True):
     return table
 
 
-def _build_status(stocks, after_hours, offline, update_time, mode, tr, group_name=None):
+def _build_status(stocks, after_hours, offline, update_time, mode, tr):
     text = Text()
     if offline:
         text.append(tr("offline"), style="yellow bold")
@@ -218,8 +224,6 @@ def _build_status(stocks, after_hours, offline, update_time, mode, tr, group_nam
     else:
         text.append(f"{tr('last_update')} {update_time}")
 
-    if group_name:
-        text.append(f"  {tr('group_status', name=group_name)}", style="bright_black")
     if mode:
         labels = []
         if mode >= 1:
@@ -282,11 +286,14 @@ def _build_help(tr):
 
 def _build_view(
     stocks, holdings, mode, after, offline, ts, tr, show_help=False, colorize=True,
-    group_name=None,
+    group_name=None, has_groups=False,
 ):
     parts = [
-        _build_table(stocks, holdings, mode, tr, colorize=colorize),
-        _build_status(stocks, after, offline, ts, mode, tr, group_name=group_name),
+        _build_table(
+            stocks, holdings, mode, tr, colorize=colorize, group_name=group_name,
+            has_groups=has_groups,
+        ),
+        _build_status(stocks, after, offline, ts, mode, tr),
     ]
     if mode:
         parts.append(_build_summary(stocks, holdings, mode, tr, colorize=colorize))
@@ -341,6 +348,7 @@ def main_loop(cfg, lang_code=None):
                 _build_view(
                     _group_filter(stocks_cache, groups, group_view), holdings, mode,
                     not _in_session(), offline, ts, tr, show_help, colorize, group_view,
+                    bool(group_names),
                 ),
                 refresh=True,
             )
@@ -399,6 +407,7 @@ def main_loop(cfg, lang_code=None):
                     _build_view(
                         _group_filter(stocks_cache, groups, group_view), holdings, mode,
                         after, offline, ts, tr, show_help, colorize, group_view,
+                        bool(group_names),
                     ),
                     refresh=True,
                 )

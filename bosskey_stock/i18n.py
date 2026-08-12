@@ -46,6 +46,7 @@ _T = {
     ),
     # 分组（状态栏 / CLI）
     "group_status": ("Group: {name}", "分组: {name}"),
+    "view_all": ("All", "全部"),
     "cli_groups": ("Groups:", "分组:"),
     "group_empty": ("No groups.", "暂无分组。"),
     "group_added": ("Group created: {name} [{codes}]", "已创建分组: {name} [{codes}]"),
