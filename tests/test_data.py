@@ -114,6 +114,7 @@ def test_sina_code_bond_sh():
     assert data._sina_code("127111") == "sh127111"  # 沪市公司债
     assert data._sina_code("132001") == "sh132001"  # 沪市可交换债
     assert data._sina_code("204001") == "sh204001"  # 沪市国债回购
+    assert data._sina_code("713123") == "sh713123"  # 沪市新可转债段（2024 后上市）
 
 
 def test_sina_code_bond_sz():
@@ -131,6 +132,7 @@ def test_sina_code_bond_sz():
 def test_is_bond():
     assert data._is_bond("010107") is True
     assert data._is_bond("113550") is True
+    assert data._is_bond("713123") is True  # 沪市新可转债段
     assert data._is_bond("112493") is True
     assert data._is_bond("123118") is True
     assert data._is_bond("204001") is True
