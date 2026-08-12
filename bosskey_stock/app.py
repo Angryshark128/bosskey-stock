@@ -17,7 +17,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .boss import BossGenerator
-from .data import _is_etf, fetch
+from .data import _is_bond, _is_etf, fetch
 from .i18n import lang
 
 # ── 交易时段 ────────────────────────────────────────────
@@ -165,7 +165,7 @@ def _build_table(stocks, holdings, mode, tr, colorize=True):
         pct = s["change_pct"]
         up = price is not None and chg is not None and chg >= 0
         style = ("red3" if up else "green3") if colorize else None
-        dp = 3 if _is_etf(s["code"]) else 2
+        dp = 3 if _is_etf(s["code"]) or _is_bond(s["code"]) else 2
 
         row = [
             Text(s["code"], style=style),

@@ -102,6 +102,47 @@ def test_sina_code_bj():
     assert data._sina_code("920002") == "bj920002"
 
 
+def test_sina_code_bond_sh():
+    """沪市债券（01 国债 / 110-118 转债 / 122-127 企业债 / 132 / 204 回购）映射到 sh。"""
+    assert data._sina_code("010107") == "sh010107"  # 沪市国债
+    assert data._sina_code("019547") == "sh019547"  # 沪市国债
+    assert data._sina_code("110079") == "sh110079"  # 沪市可转债
+    assert data._sina_code("113550") == "sh113550"  # 沪市可转债
+    assert data._sina_code("118001") == "sh118001"  # 沪市可转债
+    assert data._sina_code("122009") == "sh122009"  # 沪市企业债
+    assert data._sina_code("124112") == "sh124112"  # 沪市企业债
+    assert data._sina_code("127111") == "sh127111"  # 沪市公司债
+    assert data._sina_code("132001") == "sh132001"  # 沪市可交换债
+    assert data._sina_code("204001") == "sh204001"  # 沪市国债回购
+
+
+def test_sina_code_bond_sz():
+    """深市债券（10-13 段）保持 sz：国债 / 企业债 / 公司债 / 可转债 / 回购。"""
+    assert data._sina_code("100213") == "sz100213"  # 深市国债
+    assert data._sina_code("101213") == "sz101213"  # 深市国债
+    assert data._sina_code("109118") == "sz109118"  # 深市地方债
+    assert data._sina_code("111051") == "sz111051"  # 深市企业债
+    assert data._sina_code("112493") == "sz112493"  # 深市公司债
+    assert data._sina_code("123118") == "sz123118"  # 深市可转债
+    assert data._sina_code("128095") == "sz128095"  # 深市可转债
+    assert data._sina_code("131810") == "sz131810"  # 深市国债回购
+
+
+def test_is_bond():
+    assert data._is_bond("010107") is True
+    assert data._is_bond("113550") is True
+    assert data._is_bond("112493") is True
+    assert data._is_bond("123118") is True
+    assert data._is_bond("204001") is True
+    assert data._is_bond("131810") is True
+    # 股票 / ETF / 深市基金不受影响
+    assert data._is_bond("600519") is False
+    assert data._is_bond("000001") is False
+    assert data._is_bond("510300") is False
+    assert data._is_bond("159915") is False
+    assert data._is_bond("161725") is False  # 深市 LOF 基金，非债券
+
+
 def test_is_etf():
     assert data._is_etf("510300") is True
     assert data._is_etf("588000") is True
@@ -127,6 +168,41 @@ def test_parse_etf():
     assert s["vol"] == 535321917
     assert s["change"] == -0.031
     assert s["change_pct"] == pytest.approx(-0.65, rel=0.01)
+
+
+def test_parse_bond():
+    """债券行情 3 位小数，涨跌额按 3 位取整（123118 惠城转债实测格式）"""
+    fields = (
+        ["惠城转债", "961.500", "961.500", "952.725", "963.000", "923.650"]
+        + ["0", "0", "356170", "334831401.070"]
+        + [""] * 20
+        + ["2026-08-12", "10:28:03"]
+    )
+    line = _make_sina_line("123118", *fields)
+    s = data._parse(line)
+    assert s is not None
+    assert s["code"] == "123118"
+    assert s["name"] == "惠城转债"
+    assert s["price"] == 952.725
+    assert s["vol"] == 356170
+    assert s["change"] == -8.775
+    assert s["change_pct"] == pytest.approx(-0.91, rel=0.01)
+
+
+def test_parse_bond_sh():
+    """沪市债券（113550 常汽转债实测格式）"""
+    fields = (
+        ["常汽转债", "154.460", "154.460", "154.460", "0.000", "0.000"]
+        + ["0", "0", "0", "0.000"]
+        + [""] * 20
+        + ["2026-06-10", "09:00:00"]
+    )
+    line = _make_sina_line("113550", *fields)
+    s = data._parse(line)
+    assert s is not None
+    assert s["code"] == "113550"
+    assert s["price"] == 154.460
+    assert s["change"] == 0.0
 
 
 def test_fetch_empty():
