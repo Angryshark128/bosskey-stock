@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/pypi-v0.2.2-orange" alt="PyPI">
+  <img src="https://img.shields.io/badge/pypi-v0.3.2-orange" alt="PyPI">
   <img src="https://img.shields.io/github/contributors/Angryshark128/bosskey-stock" alt="Contributors">
 </p>
 
@@ -47,6 +47,7 @@
 | 功能 | 说明 |
 |------|------|
 | 📊 **实时行情** | Rich 表格渲染，红涨绿跌，整行着色，支持 A 股、ETF 与债券（ETF/债券显示 3 位小数） |
+| 🎨 **默认单色** | 启动即单色（全白，屏幕不显眼）；`c` 键会话内切换彩色，配置 `display.colorize = true` 可恢复彩色 |
 | ⏱ **智能刷新** | 交易时段（工作日 9:30-11:30 / 13:00-15:00）自动刷新，非交易时段停刷 |
 | 🕶 **老板模式** | 按 `b` 一键切换 Docker build 伪日志，再按 `b` 切回 |
 | ⌨️ **零依赖终端控制** | 单线程，一次 `tcsetattr`，无后台线程 |
@@ -128,6 +129,7 @@ bosskey --lang zh list
 [display]
 refresh_interval = 3
 lang = "en"  # 界面语言：en / zh（TUI 内按 l 切换）
+colorize = false  # 红绿着色：false=单色（默认）/ true=彩色（TUI 内按 c 切换）
 
 [watchlist]
 codes = ["000001", "600519", "300750"]

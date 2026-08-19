@@ -24,6 +24,7 @@ def test_defaults():
             assert "display" in loaded
             assert "watchlist" in loaded
             assert loaded["display"]["refresh_interval"] == 3
+            assert loaded["display"]["colorize"] is False
             assert "000001" in loaded["watchlist"]["codes"]
         finally:
             cfg.CONFIG_PATH = orig
@@ -201,6 +202,30 @@ def test_get_lang_unknown_falls_back_en():
         try:
             cfg.set_lang("fr")
             assert cfg.get_lang() == "en"
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_default_colorize_false():
+    """默认单色：无 colorize 键（旧配置）回落 False。"""
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.save({"display": {"refresh_interval": 3, "lang": "en"}, "watchlist": {"codes": []}})
+            assert cfg.get_colorize() is False
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_set_colorize_true():
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.set_colorize(True)
+            assert cfg.get_colorize() is True
+            assert cfg.load()["display"]["colorize"] is True
+            cfg.set_colorize(False)
+            assert cfg.get_colorize() is False
         finally:
             cfg.CONFIG_PATH = orig
 

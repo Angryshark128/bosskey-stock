@@ -10,7 +10,7 @@ from . import i18n
 CONFIG_PATH = os.path.expanduser("~/.bosskey.toml")
 
 DEFAULT = {
-    "display": {"refresh_interval": 3, "lang": "en"},
+    "display": {"refresh_interval": 3, "lang": "en", "colorize": False},
     "watchlist": {"codes": ["000001", "600519", "300750"], "groups": {}},
     "holdings": {},
 }
@@ -44,6 +44,19 @@ def set_lang(code):
     """写入语言设置并持久化。"""
     cfg = load()
     cfg.setdefault("display", {})["lang"] = code
+    save(cfg)
+
+
+def get_colorize():
+    """返回是否启用红绿着色；缺省 False（默认单色），兼容旧配置无此键。"""
+    cfg = load()
+    return bool(cfg.get("display", {}).get("colorize", False))
+
+
+def set_colorize(value):
+    """写入着色开关（True=彩色）并持久化。"""
+    cfg = load()
+    cfg.setdefault("display", {})["colorize"] = bool(value)
     save(cfg)
 
 

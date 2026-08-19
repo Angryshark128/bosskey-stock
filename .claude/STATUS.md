@@ -1,5 +1,20 @@
 # STATUS
 
+## [2026-08-19] v0.3.2 — 默认单色模式
+
+### 现状
+- 待办「默认为单色模式」（2026-08-18 记录，P1）已实施：启动即单色（`colorize=False` 全白显示），`c` 键仍会话内切换彩色/单色。
+- 配置新增 `[display] colorize`：默认 `false`（单色），`true` 恢复彩色；旧配置无此键自动按单色处理。
+- 改动：`config.py`（DEFAULT + `get_colorize`/`set_colorize`）、`app.py`（初始值读配置）、`tests/`（+3 测试：config 默认值/读写、TUI 首次渲染单色）。
+- 98 个测试全绿；版本 0.3.1 → 0.3.2（pyproject / README badge / CHANGELOG）。
+- 待办来源：my-memo decisions.md 2026-08-18「bosskey-stock 新增待办：默认为单色模式」。
+
+### 待办
+- [x] 默认单色：config 加 `colorize` 项（默认 false），TUI 初始值读配置 — P1
+- [x] 测试：config 默认/读写 + main_loop 首次渲染 colorize=False — P1
+- [x] 版本 0.3.1 → 0.3.2 + CHANGELOG/README — P0
+- [ ] 推送分支 → tag v0.3.2 → Release 发布 PyPI — P0
+
 ## [2026-08-06] v0.2.1 发布 — TodayP/L% 去重 + 中英界面切换
 
 ### 现状

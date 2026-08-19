@@ -324,7 +324,8 @@ def main_loop(cfg, lang_code=None):
     boss_mode = False
     mode = 0  # 显示模式：0=基础，1..3 渐进展开持仓/收益列
     show_help = False  # h 键：底部快捷键提示
-    colorize = True  # c 键：彩色/单色切换
+    # 默认单色；c 键会话内切换，配置 colorize=true 恢复彩色
+    colorize = bool(cfg["display"].get("colorize", False))
     group_view = None  # g 键：None=全部，否则当前分组名
     lang_state = lang(lang_code if lang_code is not None else cfg["display"].get("lang", "en"))
     tr = lang_state["t"]

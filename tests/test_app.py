@@ -163,3 +163,69 @@ def test_build_table_group_title():
     assert t2.title == "全部"
     t3 = _build_table(stocks, {}, 0, tr)
     assert t3.title is None  # 无分组时保持极简
+
+
+# ── 主循环：默认单色 ──────────────────────────────────────
+
+
+class _FakeLive:
+    """替代 rich Live 的桩：仅记录 update 调用。"""
+
+    def __init__(self, *a, **k):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        pass
+
+    def update(self, *a, **k):
+        pass
+
+
+class _FakeStdin:
+    def fileno(self):
+        return 0
+
+
+def _run_main_loop(monkeypatch, display_cfg):
+    """跑一轮 main_loop（_read_key 立即返回 q 退出），返回 _build_view 调用记录。"""
+    import termios
+
+    import bosskey_stock.app as app
+
+    cfg = {
+        "watchlist": {"codes": ["000001"], "groups": {}},
+        "holdings": {},
+        "display": display_cfg,
+    }
+    calls = []
+    real_build_view = app._build_view
+
+    def spy(*args, **kwargs):
+        calls.append((args, kwargs))
+        return real_build_view(*args, **kwargs)
+
+    monkeypatch.setattr(app, "fetch", lambda codes: None)
+    monkeypatch.setattr(app, "_read_key", lambda fd: "q")
+    monkeypatch.setattr(app, "_setup_tty", lambda fd: None)
+    monkeypatch.setattr(app, "Live", _FakeLive)
+    monkeypatch.setattr(app, "_build_view", spy)
+    monkeypatch.setattr(app.sys, "stdin", _FakeStdin())
+    monkeypatch.setattr(termios, "tcgetattr", lambda fd: None)
+    monkeypatch.setattr(termios, "tcsetattr", lambda *a, **k: None)
+    app.main_loop(cfg)
+    return calls
+
+
+def test_main_loop_defaults_to_mono(monkeypatch):
+    """默认单色：display 无 colorize 键时首次渲染 colorize=False。"""
+    calls = _run_main_loop(monkeypatch, {"refresh_interval": 3, "lang": "en"})
+    assert calls and calls[0][0][8] is False
+
+
+def test_main_loop_colorize_from_config(monkeypatch):
+    """配置 colorize=true 时启动即彩色。"""
+    calls = _run_main_loop(monkeypatch, {"refresh_interval": 3, "lang": "en", "colorize": True})
+    assert calls and calls[0][0][8] is True
