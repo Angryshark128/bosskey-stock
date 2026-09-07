@@ -189,8 +189,8 @@ class _FakeStdin:
         return 0
 
 
-def _run_main_loop(monkeypatch, display_cfg):
-    """跑一轮 main_loop（_read_key 立即返回 q 退出），返回 _build_view 调用记录。"""
+def _run_main_loop(monkeypatch, display_cfg, keys=("q",)):
+    """跑一轮 main_loop，返回 _build_view 调用记录；keys 为依次返回的按键队列。"""
     import termios
 
     import bosskey_stock.app as app
@@ -207,8 +207,9 @@ def _run_main_loop(monkeypatch, display_cfg):
         calls.append((args, kwargs))
         return real_build_view(*args, **kwargs)
 
+    key_iter = iter(keys)
     monkeypatch.setattr(app, "fetch", lambda codes: None)
-    monkeypatch.setattr(app, "_read_key", lambda fd: "q")
+    monkeypatch.setattr(app, "_read_key", lambda fd: next(key_iter, "q"))
     monkeypatch.setattr(app, "_setup_tty", lambda fd: None)
     monkeypatch.setattr(app, "Live", _FakeLive)
     monkeypatch.setattr(app, "_build_view", spy)
@@ -223,6 +224,20 @@ def test_main_loop_defaults_to_mono(monkeypatch):
     """默认单色：display 无 colorize 键时首次渲染 colorize=False。"""
     calls = _run_main_loop(monkeypatch, {"refresh_interval": 3, "lang": "en"})
     assert calls and calls[0][0][8] is False
+
+
+def test_main_loop_defaults_to_all_columns(monkeypatch):
+    """默认展示全部列：首次渲染 mode=3（全 14 列）。"""
+    calls = _run_main_loop(monkeypatch, {"refresh_interval": 3, "lang": "en"})
+    assert calls and calls[0][0][2] == 3
+
+
+def test_main_loop_t_key_collapses_columns(monkeypatch):
+    """默认全列下 t 键逐层收起：3 → 2 → 1 → 0 循环。"""
+    calls = _run_main_loop(
+        monkeypatch, {"refresh_interval": 3, "lang": "en"}, keys=("t", "t", "t", "q")
+    )
+    assert [c[0][2] for c in calls] == [3, 2, 1, 0]
 
 
 def test_main_loop_colorize_from_config(monkeypatch):

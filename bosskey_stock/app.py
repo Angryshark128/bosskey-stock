@@ -322,7 +322,7 @@ def main_loop(cfg, lang_code=None):
 
     boss = BossGenerator()
     boss_mode = False
-    mode = 0  # 显示模式：0=基础，1..3 渐进展开持仓/收益列
+    mode = 3  # 显示模式：默认全部列（3=全 14 列），t 键逐层收起
     show_help = False  # h 键：底部快捷键提示
     # 默认单色；c 键会话内切换，配置 colorize=true 恢复彩色
     colorize = bool(cfg["display"].get("colorize", False))
@@ -364,7 +364,8 @@ def main_loop(cfg, lang_code=None):
                     if boss_mode:
                         boss.reset()
                 if key == "t":
-                    mode = (mode + 1) % _DISPLAY_MODES
+                    # 默认全列，按 t 逐层收起：3 → 2 → 1 → 0 → 3 循环
+                    mode = (mode - 1) % _DISPLAY_MODES
                 if key == "g":  # 分组循环：全部 → 组1 → … → 组n → 全部
                     if group_names:
                         if group_view is None:
