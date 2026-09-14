@@ -85,6 +85,18 @@ def test_build_table_etf_price_precision():
     assert "1690.00" in stk_table.columns[2]._cells[0].plain
 
 
+def test_build_table_reit_price_precision():
+    """深市 REITs（180101）在 TUI 中按 3 位小数渲染（此前按 2 位，涨跌额被舍掉一位）"""
+    reit = _stock()
+    reit["code"] = "180101"
+    reit["price"] = 1.458
+    reit["change"] = -0.012
+    tr = lang("en")["t"]
+    table = _build_table([reit], {}, 0, tr)
+    assert table.columns[2]._cells[0].plain == "1.458"  # Price
+    assert table.columns[4]._cells[0].plain == "-0.012"  # Chg
+
+
 def test_build_summary_modes():
     # price 1690.0, cost 1600.0, shares 100 → pos 169000, cost 160000,
     # hold_pl +9000 (5.62%), today_pl +1500 (0.90% vs pre_close 1675*100)
@@ -244,3 +256,72 @@ def test_main_loop_colorize_from_config(monkeypatch):
     """配置 colorize=true 时启动即彩色。"""
     calls = _run_main_loop(monkeypatch, {"refresh_interval": 3, "lang": "en", "colorize": True})
     assert calls and calls[0][0][8] is True
+
+
+# ── 场外开放式基金（`fu:` 显式前缀） ──────────────────────
+
+
+def _otc_fund():
+    """场外净值型基金行情：无开高低、无成交量/成交额。"""
+    return {
+        "code": "fu:110022",
+        "name": "易方达消费行业股票",
+        "open": None,
+        "pre_close": 2.8260,
+        "price": 2.8377,
+        "high": None,
+        "low": None,
+        "vol": None,
+        "amount": None,
+        "date": "2026-09-14",
+        "trade_time": "16:04:00",
+        "change": 0.0117,
+        "change_pct": 0.4149,
+    }
+
+
+def test_build_table_otc_fund_price_and_dashes():
+    """场外基金：净值 4 位（不被舍成 2.838），量额/开高低显示 --。"""
+    tr = lang("en")["t"]
+    table = _build_table([_otc_fund()], {}, 0, tr)
+    assert table.columns[2]._cells[0].plain == "2.8377"  # Price
+    assert table.columns[4]._cells[0].plain == "+0.0117"  # Chg
+    for i in (5, 6, 7, 8):  # Vol / Open / High / Low
+        assert table.columns[i]._cells[0].plain == "--"
+
+
+def test_build_table_otc_fund_fractional_shares():
+    """场外份额是小数（按金额申购）：352.4 份原样显示，成本净值 4 位，收益按小数份额算。"""
+    tr = lang("en")["t"]
+    h = {"fu:110022": {"shares": 352.4, "cost": 2.8123}}
+    table = _build_table([_otc_fund()], h, 2, tr)
+    assert table.columns[9]._cells[0].plain == "352.4"  # Pos
+    assert table.columns[10]._cells[0].plain == "2.8123"  # Cost（4 位）
+    # HoldP/L = (2.8377 - 2.8123) * 352.4 = +8.95096
+    assert table.columns[11]._cells[0].plain == "+8.95"
+
+
+def test_build_table_integer_shares_unchanged():
+    """整数份额显示与改动前完全一致（100 就是 100），股票成本列仍 3 位。"""
+    tr = lang("en")["t"]
+    h = {"600519": {"shares": 100, "cost": 1600.0}}
+    table = _build_table([_stock()], h, 1, tr)
+    assert table.columns[9]._cells[0].plain == "100"
+    assert table.columns[10]._cells[0].plain == "1600"
+
+
+def test_fmt_price_and_shares_helpers():
+    """精度辅助函数：默认 3 位不变，只有 fu 用 4 位。"""
+    from bosskey_stock.app import _cost_decimals, _fmt_price, _fmt_shares
+
+    assert _fmt_price(2.8377) == "2.838"  # 默认仍 3 位（股票/场内成本列零变化）
+    assert _fmt_price(2.8377, 4) == "2.8377"
+    assert _fmt_price(12.345) == "12.345"  # 场内成本不被 2 位截断
+    assert _fmt_price(None, 4) == "--"
+    assert _cost_decimals("600519") == 3
+    assert _cost_decimals("510300") == 3
+    assert _cost_decimals("fu:110022") == 4
+    assert _fmt_shares(100) == "100"
+    assert _fmt_shares(100.0) == "100"
+    assert _fmt_shares(352.4) == "352.4"
+    assert _fmt_shares(1234567.5) == "1,234,567.5"

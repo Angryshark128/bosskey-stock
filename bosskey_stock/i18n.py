@@ -89,37 +89,22 @@ _T = {
     "cli_invalid": ("Invalid input, try again.", "输入无效, 请重试。"),
     "cli_saved": ("Saved: {codes}", "已保存: {codes}"),
     "cli_share_unit": ("sh", "股"),
-    # CLI 命令帮助
-    "help_add": ("Add stocks to the watchlist", "添加股票到监控列表"),
-    "help_add_codes": ("stock codes, e.g. 000001 600519", "股票代码，如 000001 600519"),
-    "help_rm": ("Remove stocks from the watchlist", "从监控列表移除股票"),
-    "help_rm_codes": ("stock codes", "股票代码"),
-    "help_list": ("Show the current watchlist", "查看当前监控列表"),
-    "help_list_interactive": (
-        "interactively reorder/delete the watchlist",
-        "交互式调整监控列表顺序并删除",
+    # CLI 同名代码消歧 / 入参校验
+    "cli_bad_code": ("Not a 6-digit code: {code}", "不是 6 位代码: {code}"),
+    "cli_no_quote": ("No quote for {code}, not added.", "{code} 查无行情，未添加。"),
+    "cli_no_quote_fu": (
+        "No NAV for {code}, not added — no such fund, or a money market fund (not supported).",
+        "{code} 查不到净值，未添加 —— 代码不存在，或为不支持的场外货币基金。",
     ),
-    "help_pos": ("Manage positions (shares + cost)", "管理持仓 (股数 + 成本价)"),
-    "help_pos_add": ("Interactively add/update positions", "交互式添加/更新持仓"),
-    "help_pos_rm": ("Remove a position", "移除持仓"),
-    "help_pos_rm_code": ("stock code", "股票代码"),
-    "help_pos_list": ("Show all positions", "查看全部持仓"),
-    "help_run": ("Start the monitoring UI (default)", "启动盯盘界面 (默认)"),
-    # CLI group 子命令
-    "help_group": ("Manage watchlist groups", "管理监控列表分组"),
-    "help_group_add": ("Create a group with codes", "创建分组并归入代码"),
-    "help_group_rm": ("Remove a group (codes kept)", "删除分组 (代码保留)"),
-    "help_group_rename": ("Rename a group", "重命名分组"),
-    "help_group_list": ("List all groups", "查看全部分组"),
-    "help_group_add_codes": ("Add codes to a group", "向分组添加代码"),
-    "help_group_rm_codes": ("Remove codes from a group", "从分组移除代码"),
-    "help_group_name": ("group name", "分组名"),
-    "help_group_codes": ("stock codes (optional)", "股票代码 (可选)"),
-    "help_add_group": (
-        "assign codes to this group (auto-create if missing)",
-        "归入该分组 (不存在则自动创建)",
+    "cli_multi_default": (
+        "{code} = {name} (also {others})",
+        "{code} = {name}（另有 {others}）",
     ),
-    "help_list_group": ("only show this group", "只显示该分组"),
+    "cli_multi_match": ("{n} entries match {code}:", "匹配 {code} 的有 {n} 条："),
+    "cli_no_position": ("No position: {code}", "未持有: {code}"),
+    "cli_choose_rm": ("Select [1-{n}, a = all]: ", "请选择 [1-{n}，a = 全部]: "),
+    "cli_not_in_list": ("Not in watchlist: {code}", "不在监控列表中: {code}"),
+    "cli_already": ("Already in watchlist: {code}", "已在监控列表中: {code}"),
     # Reorder TUI
     "reorder_loading": ("Fetching names...", "正在获取名称..."),
     "reorder_title": (
@@ -151,7 +136,8 @@ def lang(lang_code="en"):
     idx = _LANGS.index(resolve(lang_code))
     return {
         "code": _LANGS[idx],
-        "t": lambda key, **fmt: _t(_T[key][idx], fmt),
+        # 形参命名为 _key：文案占位符允许叫 {key}（tr("x", key=...)）而不与形参冲突
+        "t": lambda _key, **fmt: _t(_T[_key][idx], fmt),
     }
 
 

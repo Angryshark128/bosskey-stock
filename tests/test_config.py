@@ -175,6 +175,33 @@ def test_position_remove_nonexistent():
             cfg.CONFIG_PATH = orig
 
 
+def test_position_fractional_shares():
+    """场外基金按金额申购：份额是小数（1000 元 ÷ 净值 2.8377），能存取不丢精度。"""
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.add_position("fu:110022", 352.4, 2.8377)
+            pos = cfg.list_positions()
+            assert pos["fu:110022"] == {"shares": 352.4, "cost": 2.8377}
+            assert "fu:110022" in cfg.list_codes()
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
+def test_position_integer_shares_still_roundtrip():
+    """整数份额照旧存取（含从交互式录入来的 float 100.0）。"""
+    with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
+        cfg, orig = _monkey_patch_cfg(tmp)
+        try:
+            cfg.add_position("600519", 100, 1500.0)
+            cfg.add_position("000001", 200.0, 12.5)
+            pos = cfg.list_positions()
+            assert pos["600519"]["shares"] == 100
+            assert pos["000001"]["shares"] == 200.0
+        finally:
+            cfg.CONFIG_PATH = orig
+
+
 def test_default_lang_en():
     with tempfile.TemporaryDirectory(prefix=_PREFIX) as tmp:
         cfg, orig = _monkey_patch_cfg(tmp)

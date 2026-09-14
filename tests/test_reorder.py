@@ -1,11 +1,10 @@
 """Tests for interactive reorder — 顺序调整纯逻辑。"""
 
 from bosskey_stock.__main__ import _build_parser, _reorder_move_down, _reorder_move_up
-from bosskey_stock.i18n import lang
 
 
 def _parser():
-    return _build_parser(lang("en")["t"])
+    return _build_parser()
 
 
 def test_list_plain_no_interactive():

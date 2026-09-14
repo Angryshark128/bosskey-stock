@@ -14,17 +14,67 @@ from . import app, config, data
 from .i18n import LANG_NAMES, lang
 
 
-def _build_parser(tr):
+class _ZhHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """帮助文本中文化：argparse 自带的 `usage: ` 前缀硬编码在 `add_usage()` 里，只能覆写。
+
+    继承 RawDescriptionHelpFormatter 是为了保留多行 epilog（add 的用法说明）。
+    """
+
+    def add_usage(self, usage, actions, groups, prefix=None):
+        super().add_usage(usage, actions, groups, "用法：" if prefix is None else prefix)
+
+
+def _zh(parser):
+    """把 argparse 的两个小标题换成中文（`positional arguments` / `options`）。
+
+    argparse 没给公开 API，只能设这两个私有属性（社区通行做法）。
+    """
+    parser._positionals.title = "参数"
+    parser._optionals.title = "选项"
+    return parser
+
+
+def _sub(sub, name, **kw):
+    """建一个子命令 parser：中文帮助框架 + 中文 -h。"""
+    p = sub.add_parser(name, formatter_class=_ZhHelpFormatter, add_help=False, **kw)
+    p.add_argument("-h", "--help", action="help", help="显示帮助并退出")
+    return _zh(p)
+
+
+_HELP_ADD_EPILOG = """\
+代码自动在 sh/sz/bj 三个交易所中匹配：
+  命中一个  -> 直接使用
+  零命中    -> 提示查无行情，不添加
+  命中多个  -> 直接用段位规则那条，不打断（如 000001 -> 000001 平安银行），
+             并把另一条候选连同其强制前缀打印出来。
+
+前缀：sh: / sz: / bj: 强制指定交易所，fu: = 场外基金。
+  bosskey add 600519 000858            股票
+  bosskey add 510300 508000 113550     ETF / REITs / 可转债
+  bosskey add fu:110022                场外基金（净值型，4 位小数）
+  bosskey add sh:000001                强制取上证指数"""
+
+
+def _build_parser():
+    """构建 CLI 解析器。帮助文本一律中文，不随 --lang 切换。
+
+    帮助是给人读的用法说明，不参与「英文伪装」（伪装只针对 TUI 界面与运行期输出），
+    没必要让人为了看说明先猜语言；`--lang` 只影响运行期输出的语言。
+    """
     parser = argparse.ArgumentParser(
         prog="bosskey",
         description="终端摸鱼盯盘工具 — 按一下 b 键，行情秒变 Docker 编译日志",
+        formatter_class=_ZhHelpFormatter,
+        add_help=False,
     )
+    _zh(parser)
+    parser.add_argument("-h", "--help", action="help", help="显示帮助并退出")
     parser.add_argument(
         "--lang",
         choices=sorted(LANG_NAMES),
-        help="界面语言，可选 "
+        help="运行期输出语言，可选 "
         + ", ".join(sorted(LANG_NAMES))
-        + "（默认取 ~/.bosskey.toml 的 display.lang，未设置时英文）",
+        + "（默认取 ~/.bosskey.toml 的 display.lang，未设置时英文；不影响帮助）",
     )
     parser.add_argument(
         "--list-langs",
@@ -33,64 +83,92 @@ def _build_parser(tr):
     )
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
-    sub.add_parser("run", help=tr("help_run"))
+    _sub(sub, "run", help="启动盯盘界面（默认）")
 
-    p_add = sub.add_parser("add", help=tr("help_add"))
-    p_add.add_argument("codes", nargs="+", metavar="CODE", help=tr("help_add_codes"))
-    p_add.add_argument("--group", metavar="NAME", help=tr("help_add_group"))
+    p_add = _sub(
+        sub,
+        "add",
+        help="添加股票/基金到监控列表",
+        epilog=_HELP_ADD_EPILOG,
+    )
+    p_add.add_argument(
+        "codes",
+        nargs="+",
+        metavar="CODE",
+        help="代码，如 000001 600519；sh:000001 强制指定交易所；fu:110022 = 场外基金",
+    )
+    p_add.add_argument("--group", metavar="NAME", help="归入该分组（不存在则自动创建）")
 
-    p_rm = sub.add_parser("rm", help=tr("help_rm"))
-    p_rm.add_argument("codes", nargs="+", metavar="CODE", help=tr("help_rm_codes"))
+    p_rm = _sub(sub, "rm", help="从监控列表移除代码")
+    p_rm.add_argument(
+        "codes",
+        nargs="+",
+        metavar="CODE",
+        help="代码（或 sh:000001 / fu:110022 形式的键）",
+    )
 
-    p_list = sub.add_parser("list", help=tr("help_list"))
+    p_list = _sub(sub, "list", help="查看当前监控列表")
     p_list.add_argument(
         "-i",
         "--interactive",
         action="store_true",
-        help=tr("help_list_interactive"),
+        help="交互式调整监控列表顺序并删除",
     )
-    p_list.add_argument("--group", metavar="NAME", help=tr("help_list_group"))
+    p_list.add_argument("--group", metavar="NAME", help="只显示该分组")
 
-    p_group = sub.add_parser("group", help=tr("help_group"))
+    p_group = _sub(sub, "group", help="管理监控列表分组")
     pg = p_group.add_subparsers(dest="group_cmd", metavar="SUBCOMMAND", required=True)
 
-    pg_add = pg.add_parser("add", help=tr("help_group_add"))
-    pg_add.add_argument("name", metavar="NAME", help=tr("help_group_name"))
-    pg_add.add_argument("codes", nargs="*", metavar="CODE", help=tr("help_group_codes"))
+    pg_add = _sub(pg, "add", help="创建分组并归入代码")
+    pg_add.add_argument("name", metavar="NAME", help="分组名")
+    pg_add.add_argument("codes", nargs="*", metavar="CODE", help="代码（可选）")
 
-    pg_rm = pg.add_parser("rm", help=tr("help_group_rm"))
-    pg_rm.add_argument("name", metavar="NAME", help=tr("help_group_name"))
+    pg_rm = _sub(pg, "rm", help="删除分组（代码保留）")
+    pg_rm.add_argument("name", metavar="NAME", help="分组名")
 
-    pg_ren = pg.add_parser("rename", help=tr("help_group_rename"))
-    pg_ren.add_argument("old", metavar="OLD", help=tr("help_group_name"))
-    pg_ren.add_argument("new", metavar="NEW", help=tr("help_group_name"))
+    pg_ren = _sub(pg, "rename", help="重命名分组")
+    pg_ren.add_argument("old", metavar="OLD", help="分组名")
+    pg_ren.add_argument("new", metavar="NEW", help="分组名")
 
-    pg.add_parser("list", help=tr("help_group_list"))
+    _sub(pg, "list", help="查看全部分组")
 
-    pg_ac = pg.add_parser("add-codes", help=tr("help_group_add_codes"))
-    pg_ac.add_argument("name", metavar="NAME", help=tr("help_group_name"))
-    pg_ac.add_argument("codes", nargs="+", metavar="CODE", help=tr("help_add_codes"))
+    pg_ac = _sub(pg, "add-codes", help="向分组添加代码")
+    pg_ac.add_argument("name", metavar="NAME", help="分组名")
+    pg_ac.add_argument(
+        "codes",
+        nargs="+",
+        metavar="CODE",
+        help="代码，如 000001 600519；sh:000001 强制指定交易所；fu:110022 = 场外基金",
+    )
 
-    pg_rc = pg.add_parser("rm-codes", help=tr("help_group_rm_codes"))
-    pg_rc.add_argument("name", metavar="NAME", help=tr("help_group_name"))
-    pg_rc.add_argument("codes", nargs="+", metavar="CODE", help=tr("help_add_codes"))
+    pg_rc = _sub(pg, "rm-codes", help="从分组移除代码")
+    pg_rc.add_argument("name", metavar="NAME", help="分组名")
+    pg_rc.add_argument(
+        "codes",
+        nargs="+",
+        metavar="CODE",
+        help="代码，如 000001 600519；sh:000001 强制指定交易所；fu:110022 = 场外基金",
+    )
 
-    p_pos = sub.add_parser("pos", help=tr("help_pos"))
+    p_pos = _sub(sub, "pos", help="管理持仓（股数 + 成本价）")
     ppos = p_pos.add_subparsers(dest="pos_cmd", metavar="SUBCOMMAND", required=True)
 
-    ppos.add_parser("add", help=tr("help_pos_add"))
+    _sub(ppos, "add", help="交互式添加/更新持仓")
 
-    pr = ppos.add_parser("rm", help=tr("help_pos_rm"))
-    pr.add_argument("code", metavar="CODE", help=tr("help_pos_rm_code"))
+    pr = _sub(ppos, "rm", help="移除持仓")
+    pr.add_argument("code", metavar="CODE", help="代码（或 sh:000001 / fu:110022 形式的键）")
 
-    ppos.add_parser("list", help=tr("help_pos_list"))
+    _sub(ppos, "list", help="查看全部持仓")
 
     return parser
 
 
-def _fmt_money(v):
-    """金额输出：去尾零，如 1500.5 / 12.0 → '12'。"""
-    return f"{v:.3f}".rstrip("0").rstrip(".")
+def _fmt_money(v, dp=3):
+    """金额输出：最多 dp 位小数，去尾零，如 1500.5 / 12.0 → '12'。
+
+    场外基金传入 4，避免成本净值 2.8377 被截成 2.838。
+    """
+    return f"{v:.{dp}f}".rstrip("0").rstrip(".")
 
 
 def _prompt(desc, cast, validate, tr):
@@ -145,7 +223,7 @@ def _interactive_add(tr):
     selected = list(dict.fromkeys(codes[i - 1] for i in idxs))  # 去重保序
     for code in selected:
         print(f"\n{code}:")
-        shares = _prompt(tr("cli_shares_prompt"), int, lambda v: v > 0, tr)
+        shares = _prompt(tr("cli_shares_prompt"), float, lambda v: v > 0, tr)
         cost = _prompt(tr("cli_cost_prompt"), float, lambda v: v > 0, tr)
         if shares is None or cost is None:
             print(tr("cli_cancelled"))
@@ -157,21 +235,95 @@ def _interactive_add(tr):
 def _print_positions(positions, tr):
     for code, h in sorted(positions.items()):
         unit = tr("cli_share_unit")
-        print(f"  {code}  {h['shares']:,}{unit}  cost {_fmt_money(h['cost'])}")
+        shares = app._fmt_shares(h["shares"])
+        print(f"  {code}  {shares}{unit}  cost {_fmt_money(h['cost'], app._cost_decimals(code))}")
+
+
+# ── 代码消歧：同名代码 / 无行情 ─────────────────────────
+
+
+def _match_stored(code, keys=None):
+    """keys（缺省为监控列表）里与 code 同代码的已存键；显式前缀时要求完全相同。"""
+    prefix, digits = data.split_key(code)
+    keys = config.list_codes() if keys is None else keys
+    if prefix:
+        return [k for k in keys if k == code]
+    return [k for k in keys if data.split_key(k)[1] == digits]
+
+
+def _pick_by_rule(code, cands, tr):
+    """同名代码多命中：不打断输入，直接取段位规则那条，另一条打成一行提示。
+
+    如 `000001` 沪为上证指数、深为平安银行，取规则那条（深，平安银行）并打印
+    「000001 = 平安银行（另有 上证指数 → sh:000001）」，想加指数写前缀即可。
+    """
+    rule = data.default_prefix(code)
+    picked = next(((p, n) for p, n in cands if p == rule), cands[0])
+    others = " / ".join(
+        f"{name} → {data.make_key(p, code)}" for p, name in cands if p != picked[0]
+    )
+    print(tr("cli_multi_default", code=code, name=picked[1], others=others))
+    return data.make_key(picked[0], code)
+
+
+def _resolve_add(code, tr):
+    """输入 -> 存储键；代码非法或查无行情返回 None。
+
+    探测 sh/sz/bj 三个交易所：命中一个直接用；命中多个（同名代码，如 000001 既是
+    上证指数又是平安银行）取段位规则那条，不打断输入，只把另一条候选打成一行提示；
+    探测失败（离线）回退段位规则，保持离线可用。
+    """
+    prefix, digits = data.split_key(code)
+    if len(digits) != 6 or not digits.isdigit():
+        print(tr("cli_bad_code", code=code))
+        return None
+    if prefix:  # 已显式指定交易所，不再看其它交易所
+        cands = data.probe(digits, prefix=prefix)
+        if cands is None or cands:
+            return data.make_key(prefix, digits)
+        key = data.make_key(prefix, digits)
+        # 场外货币基金接口返回空串，与「代码查无行情」区分提示
+        print(tr("cli_no_quote_fu", code=key) if prefix == "fu" else tr("cli_no_quote", code=key))
+        return None
+    cands = data.probe(digits)
+    if cands is None:
+        return digits  # 离线：按段位规则加入
+    if not cands:
+        print(tr("cli_no_quote", code=digits))
+        return None
+    if len(cands) == 1:
+        return data.make_key(cands[0][0], digits)
+    return _pick_by_rule(digits, cands, tr)
+
+
+def _choose_remove(code, matches, tr):
+    """多条命中：列出存储键 + 名称，让用户选一条或全部；EOF 取消。"""
+    names = {s["code"]: s["name"] for s in (data.fetch(matches) or [])}
+    print(tr("cli_multi_match", code=code, n=len(matches)))
+    for i, k in enumerate(matches, 1):
+        name = names.get(k)
+        print(f"  {i}) {k}" + (f"  {name}" if name else ""))
+    while True:
+        try:
+            raw = input(tr("cli_choose_rm", n=len(matches))).strip().lower()
+        except EOFError:
+            print()
+            print(tr("cli_cancelled"))
+            return []
+        if raw in ("a", "all"):
+            return matches
+        if raw.isdigit() and 1 <= int(raw) <= len(matches):
+            return [matches[int(raw) - 1]]
+        print(tr("cli_range", n=len(matches)))
 
 
 def _run_group_cmd(args, tr):
     sub = args.group_cmd
     try:
         if sub == "add":
-            config.group_add(args.name, *args.codes)
-            print(
-                tr(
-                    "group_added",
-                    name=args.name,
-                    codes=", ".join(args.codes) if args.codes else "-",
-                )
-            )
+            keys = [k for k in (_resolve_add(c, tr) for c in args.codes) if k]
+            config.group_add(args.name, *keys)
+            print(tr("group_added", name=args.name, codes=", ".join(keys) or "-"))
         elif sub == "rm":
             config.group_remove(args.name)
             print(tr("group_removed", name=args.name))
@@ -179,11 +331,27 @@ def _run_group_cmd(args, tr):
             config.group_rename(args.old, args.new)
             print(tr("group_renamed", old=args.old, new=args.new))
         elif sub == "add-codes":
-            config.group_add_codes(args.name, *args.codes)
-            print(tr("group_codes_added", name=args.name, codes=", ".join(args.codes)))
+            keys = [k for k in (_resolve_add(c, tr) for c in args.codes) if k]
+            if keys:
+                config.group_add_codes(args.name, *keys)
+                print(tr("group_codes_added", name=args.name, codes=", ".join(keys)))
         elif sub == "rm-codes":
-            config.group_remove_codes(args.name, *args.codes)
-            print(tr("group_codes_removed", name=args.name, codes=", ".join(args.codes)))
+            in_group = config.get_groups().get(args.name)
+            if in_group is None:
+                config.group_remove_codes(args.name, *args.codes)  # 触发 group_not_found
+            else:
+                keys = []
+                for c in args.codes:
+                    matches = [k for k in _match_stored(c) if k in in_group]
+                    if not matches:
+                        print(tr("cli_not_in_list", code=c))
+                    elif len(matches) == 1:
+                        keys.append(matches[0])
+                    else:
+                        keys.extend(_choose_remove(c, matches, tr))
+                if keys:
+                    config.group_remove_codes(args.name, *keys)
+                    print(tr("group_codes_removed", name=args.name, codes=", ".join(keys)))
         elif sub == "list":
             groups = config.get_groups()
             if not groups:
@@ -371,7 +539,7 @@ class GroupTitle:
 
 
 def main():
-    parser = _build_parser(tr=lang(config.get_lang())["t"])
+    parser = _build_parser()
     args = parser.parse_args()
 
     if args.list_langs:
@@ -389,16 +557,34 @@ def main():
         return
 
     if cmd == "add":
-        config.add_codes(*args.codes)
-        if args.group:
-            if args.group in config.get_groups():
-                config.group_add_codes(args.group, *args.codes)
-            else:
-                config.group_add(args.group, *args.codes)
-        print(tr("cli_added", codes=", ".join(args.codes)))
+        keys = list(dict.fromkeys(k for k in (_resolve_add(c, tr) for c in args.codes) if k))
+        if keys:
+            existing = set(config.list_codes())
+            config.add_codes(*keys)
+            if args.group:
+                if args.group in config.get_groups():
+                    config.group_add_codes(args.group, *keys)
+                else:
+                    config.group_add(args.group, *keys)
+            added = [k for k in keys if k not in existing]
+            if added:
+                print(tr("cli_added", codes=", ".join(added)))
+            for k in keys:
+                if k in existing:
+                    print(tr("cli_already", code=k))
     elif cmd == "rm":
-        config.remove_codes(*args.codes)
-        print(tr("cli_removed", codes=", ".join(args.codes)))
+        removed = []
+        for c in args.codes:
+            matches = _match_stored(c)
+            if not matches:
+                print(tr("cli_not_in_list", code=c))
+                continue
+            chosen = matches if len(matches) == 1 else _choose_remove(c, matches, tr)
+            if chosen:
+                config.remove_codes(*chosen)
+                removed.extend(chosen)
+        if removed:
+            print(tr("cli_removed", codes=", ".join(removed)))
     elif cmd == "list":
         if args.interactive:
             _interactive_reorder(tr, group=args.group)
@@ -426,8 +612,14 @@ def main():
         if sub == "add":
             _interactive_add(tr)
         elif sub == "rm":
-            config.remove_position(args.code)
-            print(tr("cli_pos_rm_ok", code=args.code))
+            matches = _match_stored(args.code, list(config.list_positions()))
+            if not matches:
+                print(tr("cli_no_position", code=args.code))
+            else:
+                chosen = matches if len(matches) == 1 else _choose_remove(args.code, matches, tr)
+                for k in chosen:
+                    config.remove_position(k)
+                    print(tr("cli_pos_rm_ok", code=k))
         elif sub == "list":
             positions = config.list_positions()
             if positions:

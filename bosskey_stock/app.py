@@ -17,7 +17,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .boss import BossGenerator
-from .data import _is_bond, _is_etf, fetch
+from .data import fetch, price_decimals
 from .i18n import lang
 
 # ── 交易时段 ────────────────────────────────────────────
@@ -82,11 +82,34 @@ def _pl_style(v, colorize=True):
     return "red3" if v > 0 else "green3"
 
 
-def _fmt_price(v):
-    """价格/成本：最多 3 位小数，去尾零。None → '--'"""
+def _fmt_price(v, dp=3):
+    """价格/成本：最多 dp 位小数，去尾零。None → '--'
+
+    dp 默认 3（股票/场内基金的成本列），场外基金传 4，避免 2.8377 被截成 2.838。
+    """
     if v is None:
         return "--"
-    return f"{v:.3f}".rstrip("0").rstrip(".")
+    return f"{v:.{dp}f}".rstrip("0").rstrip(".")
+
+
+def _fmt_shares(v):
+    """持仓份数：整数与原来完全一致（100 → '100'），小数保留 2 位去尾零。
+
+    场外基金按金额申购，份额是小数（1000 元 ÷ 净值 2.8377 ≈ 352.4 份），
+    不能再走 int() 截断。
+    """
+    if v == int(v):
+        return f"{int(v):,}"
+    return f"{v:,.2f}".rstrip("0").rstrip(".")
+
+
+def _cost_decimals(code):
+    """成本列精度：场外基金 4 位（净值 4 位小数），其余品种保持历史 3 位。
+
+    价格列直接看 price_decimals()；成本列历史固定 3 位，放宽到 2 位（股票）会改变
+    既有显示，故只在场外基金上提高。
+    """
+    return 4 if price_decimals(code) == 4 else 3
 
 
 # ── 终端：单键输入（保留输出侧 OPOST） ──────────────────
@@ -171,7 +194,7 @@ def _build_table(stocks, holdings, mode, tr, colorize=True, group_name=None, has
         pct = s["change_pct"]
         up = price is not None and chg is not None and chg >= 0
         style = ("red3" if up else "green3") if colorize else None
-        dp = 3 if _is_etf(s["code"]) or _is_bond(s["code"]) else 2
+        dp = price_decimals(s["code"])
 
         row = [
             Text(s["code"], style=style),
@@ -188,8 +211,8 @@ def _build_table(stocks, holdings, mode, tr, colorize=True, group_name=None, has
         m = _pos_metrics(s, holdings)
         if mode >= 1:
             if m:
-                row.append(Text(f"{int(m['shares']):,}"))
-                row.append(Text(_fmt_price(m["cost"])))
+                row.append(Text(_fmt_shares(m["shares"])))
+                row.append(Text(_fmt_price(m["cost"], _cost_decimals(s["code"]))))
             else:
                 row.append(Text("--"))
                 row.append(Text("--"))

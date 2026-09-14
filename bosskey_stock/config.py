@@ -245,7 +245,10 @@ def remove_position(code):
 
 
 def list_positions():
-    """返回 {code: {"shares": int, "cost": float}} 纯 dict。"""
+    """返回 {code: {"shares": int|float, "cost": float}} 纯 dict。
+
+    shares 允许小数：场外基金按金额申购，份额不是整数（1000 元 ÷ 净值 2.8377）。
+    """
     cfg = load()
     pos = cfg.get("holdings") or {}
     return {code: dict(v) for code, v in pos.items()}
