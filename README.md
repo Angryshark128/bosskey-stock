@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/pypi-v0.3.2-orange" alt="PyPI">
+  <img src="https://img.shields.io/pypi/v/bosskey-stock?label=pypi&color=orange" alt="PyPI">
   <img src="https://img.shields.io/github/contributors/Angryshark128/bosskey-stock" alt="Contributors">
 </p>
 

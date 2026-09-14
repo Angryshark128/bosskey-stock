@@ -1,5 +1,13 @@
 # STATUS
 
+## [2026-09-14] 发布 v0.4.0
+
+- 产出：commit `caa351c`（main）+ tag `v0.4.0` + GitHub Release v0.4.0；`publish.yml` 经 OIDC 发 PyPI 成功，`bosskey_stock-0.4.0-py3-none-any.whl` / `.tar.gz` 已上线；CI（3.10 / 3.11 / 3.12）通过。
+- 本文件下方标「未发版」的条目**均已随本次发布生效**：显式交易所前缀 `sh:` / `sz:` / `bj:`、场外基金 `fu:` 前缀、同名代码多命中不再追问、帮助文本恒中文、深市 180 段 REITs 小数位修正；另有 `README` 的 PyPI badge 由静态 `v0.3.2` 改为 shields 动态徽章（不再需要每次发版手改）。
+- 版本号定为 **0.4.0**（跳 minor）：新增一个品种大类（场外基金）+ `add` 交互行为变更，量级对齐 0.3.0（分组那次）。
+- 踩坑：本机 git 的 credential helper 指向 `/usr/bin/gh`，而 gh 实际在 `/usr/local/bin/gh`，直接 `git push` 报 `could not read Username for 'https://github.com'`。本次用 `git -c credential.helper= -c credential.helper='!/usr/local/bin/gh auth git-credential' push` 绕开，**未改全局配置**；要长期修可跑 `gh auth setup-git`。
+- 注意：push 时远端回了一句 `Changes must be made through a pull request.`（仓库有 PR 规则提示），但推送实际成功，未被拦。
+
 ## [2026-09-14] 帮助文本改为恒中文（未发版）
 
 ### 现状
